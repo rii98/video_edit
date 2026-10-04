@@ -1,0 +1,29 @@
+{
+  "name": "Pastel Storybook",
+  "description": "Symmetrical pastel title cards (blush, mustard, cream), elegant serif type, centred compositions, gentle glides. Warm storybook or trailer-parody feel for family and lifestyle stories.",
+  "colors": {
+    "bg": "#F7D6DC",
+    "surface": "#FFF6EA",
+    "text": "#3A2630",
+    "muted": "#8E6F78",
+    "accent": "#E4475A",
+    "accent2": "#E9A93A"
+  },
+  "fonts": {
+    "display": "Fraunces",
+    "body": "Nunito",
+    "mono": "Caveat"
+  },
+  "type": {
+    "displayWeight": 600,
+    "displayTracking": "-0.01em",
+    "uppercaseDisplay": false
+  },
+  "easing": {
+    "standard": [0.22, 1, 0.36, 1],
+    "emphasized": [0.83, 0, 0.17, 1]
+  },
+  "tempo": 1.1,
+  "stagger": 4,
+  "radius": 18
+}

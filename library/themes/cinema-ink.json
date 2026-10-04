@@ -1,0 +1,29 @@
+{
+  "name": "Cinema Ink",
+  "description": "Film-title premium: ink black with grain and light sweeps, crimson accent, gold detail, high-contrast serif headlines over mono timecode. Cinematic explainers, trailers, education promos.",
+  "colors": {
+    "bg": "#07080B",
+    "surface": "#13151B",
+    "text": "#F4F0E8",
+    "muted": "#8C909A",
+    "accent": "#E8253F",
+    "accent2": "#E8B84A"
+  },
+  "fonts": {
+    "display": "Fraunces",
+    "body": "Inter",
+    "mono": "JetBrains Mono"
+  },
+  "type": {
+    "displayWeight": 600,
+    "displayTracking": "-0.03em",
+    "uppercaseDisplay": false
+  },
+  "easing": {
+    "standard": [0.16, 1, 0.3, 1],
+    "emphasized": [0.87, 0, 0.13, 1]
+  },
+  "tempo": 1,
+  "stagger": 3,
+  "radius": 18
+}

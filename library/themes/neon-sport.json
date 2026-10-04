@@ -1,0 +1,39 @@
+{
+  "name": "Neon Sport",
+  "description": "Near-black with electric lime HUD accents, condensed uppercase type, snappy timing. Fitness, sports, high-energy social.",
+  "colors": {
+    "bg": "#0B0B0C",
+    "surface": "#17181A",
+    "text": "#F5F5F5",
+    "muted": "#9A9A9A",
+    "accent": "#C6FF00",
+    "accent2": "#FF3B30"
+  },
+  "fonts": {
+    "display": "Anton",
+    "body": "Inter",
+    "mono": "Space Grotesk"
+  },
+  "type": {
+    "displayWeight": 400,
+    "displayTracking": "0.01em",
+    "uppercaseDisplay": true
+  },
+  "easing": {
+    "standard": [
+      0.16,
+      1,
+      0.3,
+      1
+    ],
+    "emphasized": [
+      0.87,
+      0,
+      0.13,
+      1
+    ]
+  },
+  "tempo": 0.8,
+  "stagger": 2,
+  "radius": 12
+}

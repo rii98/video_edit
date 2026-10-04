@@ -1,0 +1,39 @@
+{
+  "name": "Midnight Gradient",
+  "description": "Dark SaaS: deep charcoal, fine borders, indigo/cyan aurora glow, crisp sans. Developer tools and B2B launches.",
+  "colors": {
+    "bg": "#08090A",
+    "surface": "#141518",
+    "text": "#F7F8F8",
+    "muted": "#8A8F98",
+    "accent": "#5E6AD2",
+    "accent2": "#26B5CE"
+  },
+  "fonts": {
+    "display": "Manrope",
+    "body": "Inter",
+    "mono": "JetBrains Mono"
+  },
+  "type": {
+    "displayWeight": 600,
+    "displayTracking": "-0.025em",
+    "uppercaseDisplay": false
+  },
+  "easing": {
+    "standard": [
+      0.22,
+      1,
+      0.36,
+      1
+    ],
+    "emphasized": [
+      0.65,
+      0,
+      0.35,
+      1
+    ]
+  },
+  "tempo": 1,
+  "stagger": 3,
+  "radius": 16
+}

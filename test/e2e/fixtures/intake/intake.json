@@ -1,0 +1,37 @@
+{
+  "brief": {
+    "goal": "Show a controlled, high-tempo set of skull crushers",
+    "platform": "Instagram Reels",
+    "audience": "Lifters who care about form",
+    "message": "Slow negatives build the triceps",
+    "feel": "Energetic HUD",
+    "pacing": "Rhythmic",
+    "length": "20 s",
+    "music": "Keep the original track",
+    "mustHaves": ["Rep counter", "Tempo cues"]
+  },
+  "format": { "width": 1080, "height": 1920, "fps": 30 },
+  "treatments": [
+    {
+      "id": "A",
+      "title": "Fixture Calm",
+      "pitch": "A calm, premium take for the e2e test.",
+      "theme": "keynote-mono",
+      "techniques": ["premium-product-reveal", "kinetic-typography"],
+      "outline": [{ "scene": "Hook", "seconds": 4, "beat": "Title lands" }, { "scene": "Set", "seconds": 16, "beat": "Reps" }],
+      "music": "Original",
+      "durationInFrames": 120
+    },
+    {
+      "id": "B",
+      "title": "Fixture HUD",
+      "pitch": "A rep-counting HUD for the e2e test.",
+      "theme": "neon-sport",
+      "techniques": ["fitness-hud-overlays"],
+      "outline": [{ "scene": "Reps", "seconds": 20, "beat": "Ring ticks each rep" }],
+      "music": "Original",
+      "durationInFrames": 120
+    }
+  ],
+  "chosen": null
+}

@@ -1,0 +1,7 @@
+# Bridge state and renders are not part of the edit history.
+.ev/
+out/
+.env
+# Media is large and not part of edit history; scenes reference it by asset id.
+media/
+media.json

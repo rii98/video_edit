@@ -1,0 +1,29 @@
+{
+  "name": "Market Desk",
+  "description": "Trading-terminal finance: deep navy, bull-green accent, bear-red second accent, amber highlighter, tabular mono numbers. Stock market, investing and money explainers.",
+  "colors": {
+    "bg": "#070B14",
+    "surface": "#101826",
+    "text": "#F2F5FA",
+    "muted": "#7D8AA3",
+    "accent": "#1FD67A",
+    "accent2": "#FF4D5E"
+  },
+  "fonts": {
+    "display": "Space Grotesk",
+    "body": "Inter",
+    "mono": "JetBrains Mono"
+  },
+  "type": {
+    "displayWeight": 700,
+    "displayTracking": "-0.03em",
+    "uppercaseDisplay": false
+  },
+  "easing": {
+    "standard": [0.22, 1, 0.36, 1],
+    "emphasized": [0.65, 0, 0.35, 1]
+  },
+  "tempo": 1,
+  "stagger": 3,
+  "radius": 22
+}

@@ -1,0 +1,39 @@
+{
+  "name": "Keynote Mono",
+  "description": "True black, white type, one blue accent, slow confident moves. Premium product reveals: one idea per screen.",
+  "colors": {
+    "bg": "#000000",
+    "surface": "#1D1D1F",
+    "text": "#F5F5F7",
+    "muted": "#86868B",
+    "accent": "#2997FF",
+    "accent2": "#BF5AF2"
+  },
+  "fonts": {
+    "display": "Inter",
+    "body": "Inter",
+    "mono": "JetBrains Mono"
+  },
+  "type": {
+    "displayWeight": 600,
+    "displayTracking": "-0.035em",
+    "uppercaseDisplay": false
+  },
+  "easing": {
+    "standard": [
+      0.25,
+      0.1,
+      0.25,
+      1
+    ],
+    "emphasized": [
+      0.83,
+      0,
+      0.17,
+      1
+    ]
+  },
+  "tempo": 1.25,
+  "stagger": 4,
+  "radius": 22
+}

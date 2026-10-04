@@ -1,0 +1,29 @@
+{
+  "name": "Case File Noir",
+  "description": "Spy-thriller gossip: near-black, evidence-red stamps and string, CCTV green HUD, condensed caps and typewriter mono. Secrets, mysteries, comedic conspiracies.",
+  "colors": {
+    "bg": "#0A0A0B",
+    "surface": "#1B1815",
+    "text": "#F3EEE4",
+    "muted": "#8C8579",
+    "accent": "#E5261F",
+    "accent2": "#3DFF8F"
+  },
+  "fonts": {
+    "display": "Anton",
+    "body": "Inter",
+    "mono": "JetBrains Mono"
+  },
+  "type": {
+    "displayWeight": 400,
+    "displayTracking": "0.01em",
+    "uppercaseDisplay": true
+  },
+  "easing": {
+    "standard": [0.16, 1, 0.3, 1],
+    "emphasized": [0.87, 0, 0.13, 1]
+  },
+  "tempo": 1,
+  "stagger": 2,
+  "radius": 6
+}

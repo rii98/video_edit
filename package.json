@@ -1,0 +1,37 @@
+{
+  "name": "easy-video",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "ev": "node --no-warnings scripts/ev.ts",
+    "typecheck": "tsc --noEmit",
+    "render": "remotion render src/video/index.ts Main project/out/video.mp4",
+    "test": "node --no-warnings --test test/*.test.ts",
+    "e2e": "playwright test"
+  },
+  "dependencies": {
+    "@remotion/bundler": "^4.0.532",
+    "@remotion/cli": "^4.0.532",
+    "@remotion/google-fonts": "^4.0.532",
+    "@remotion/player": "^4.0.532",
+    "@remotion/renderer": "^4.0.532",
+    "@remotion/transitions": "^4.0.532",
+    "ffmpeg-static": "^5.3.0",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "remotion": "^4.0.532"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.63.0",
+    "@types/node": "^26.6.4",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.1",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.2"
+  },
+  "allowScripts": {
+    "ffmpeg-static@5.3.0": true
+  }
+}
