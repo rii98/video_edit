@@ -2,6 +2,7 @@
 
 A natural-language video editor. The user points at frames in the browser UI and describes changes. You (Claude Code) make them by editing the video's code. See `DESIGN.md` for the full vision.
 
+- **Fresh clone / new machine** (no `node_modules/` or no `project/`): follow `SETUP.md` first.
 - `npm run dev`: the editor UI at http://127.0.0.1:5173. The user usually has it open.
 - `npm run ev -- <cmd>`: your side of the bridge. Run `npm run ev` alone for help.
 - `npm run typecheck`: run it after non-trivial edits.
