@@ -45,8 +45,9 @@ const HELP = `ev: Easy Video bridge for Claude
   occupancy <id>         Sheet of the top and bottom bands of every second: where can new graphics go?
   remove <id> [--force]  Delete an asset (refuses while scenes use it)
   sfx <kind|all> [--seed=N] [--seconds=S]   Synthesize sound effects into the library
-  tts "<text>" [--voice=Charon] [--style="…"] [--provider=auto|gemini|deepgram]
-                         Voiceover: Gemini (directable, ~100 free requests/day) with Deepgram fallback.
+  tts "<text>" [--voice=Charon] [--style="…"] [--provider=deepgram]
+                         Voiceover: Gemini (directable, ~100 free requests/day per key). If it's unavailable it
+                         stops and says how to swap the key in .env; Deepgram only when explicitly asked.
                          "[[style]] text [[style]] text" = several deliveries in one request. Cached.
   tts --voices | --usage Gemini voices (gender, tone, fits) | today's Gemini request count
   sfx-find "<query>" [--min=S --max=S --license=cc0 --sort=popular --limit=N]
@@ -462,15 +463,14 @@ async function cmdTts(args: string[]) {
     return;
   }
   const text = words.join(' ');
-  const provider = opts.provider as 'auto' | 'gemini' | 'deepgram' | undefined;
-  if (!text.trim() || (provider && !['auto', 'gemini', 'deepgram'].includes(provider))) {
-    fail('usage: tts "<text>" [--voice=Charon] [--style="warm, unhurried"] [--provider=auto|gemini|deepgram]\n' +
+  const provider = opts.provider as 'gemini' | 'deepgram' | undefined;
+  if (!text.trim() || (provider && !['gemini', 'deepgram'].includes(provider))) {
+    fail('usage: tts "<text>" [--voice=Charon] [--style="warm, unhurried"] [--provider=deepgram (only when the user asks)]\n' +
       '       per-segment styles in one request: "[[deep, ominous]] In a world… [[hushed]] No templates."\n' +
       '       tts --voices | tts --usage');
   }
   const segments = tts.parseSegments(text, opts.style);
   const r = await tts.synthesizeSpeech(segments, { provider, voice: opts.voice });
-  if (r.fellBack) console.log(`  ⚠ used Deepgram (${r.voice}): ${r.fellBack}`);
   const done = r.cached ? r.asset : await analyzeAsset(r.asset.id);
   console.log(`${r.asset.id}  ${r.provider}/${r.voice}${r.cached ? ' (cached, no API call)' : ''}  ${done?.facts.join(' · ') ?? ''}`);
 

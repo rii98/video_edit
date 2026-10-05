@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { describe, it } from 'node:test';
-import { cacheKey, GEMINI_VOICES, pacificDay, parseSegments, plainText, spokenWords, throttleDelay } from '../server/media/tts.ts';
+import { parseEnv } from 'node:util';
+import { cacheKey, GEMINI_VOICES, keyFingerprint, pacificDay, parseSegments, plainText, resetTime, spokenWords, throttleDelay, unavailableMessage } from '../server/media/tts.ts';
 
 describe('tts segments', () => {
   it('splits [[style]] markers into styled segments', () => {
@@ -52,5 +53,31 @@ describe('tts request discipline', () => {
     assert.equal(voices.length, 30);
     assert.equal(voices.filter((v) => v.gender === 'female').length, 14);
     assert.equal(voices.filter((v) => v.gender === 'male').length, 16);
+  });
+
+  it('tracks keys by a fingerprint that never contains the key', () => {
+    const a = keyFingerprint('AIza-first-key-1234567890');
+    assert.match(a, /^[0-9a-f]{8}$/);
+    assert.notEqual(a, keyFingerprint('AIza-second-key-1234567890'), 'a new key starts a fresh count');
+    assert.ok(!'AIza-first-key-1234567890'.includes(a));
+  });
+
+  it('stops with key-swap steps instead of falling back to Deepgram', () => {
+    const spent = unavailableMessage('the current key has used today\'s budget', true);
+    assert.match(spent, /Not falling back to Deepgram/);
+    assert.match(spent, /# GEMINI_API_KEY=/);
+    assert.match(spent, /--provider=deepgram/);
+    assert.match(spent, /reset at/);
+    const none = unavailableMessage('there is no GEMINI_API_KEY in .env', false);
+    assert.doesNotMatch(none, /Comment out/);
+    assert.match(none, /Add a line/);
+  });
+
+  it('a commented-out key in .env is ignored, so the new line wins', () => {
+    assert.equal(parseEnv('# GEMINI_API_KEY=old\nGEMINI_API_KEY=new\n').GEMINI_API_KEY, 'new');
+  });
+
+  it('gives the reset as a local clock time', () => {
+    assert.match(resetTime(new Date('2026-10-05T07:12:00Z')), /\d{1,2}:\d{2}/);
   });
 });

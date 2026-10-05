@@ -1,16 +1,17 @@
 // Voiceover with the user's own keys (never the macOS `say` voice). Gemini TTS is the main
 // voice: directable per segment, near the top of blind naturalness rankings, free but capped
-// at ~100 requests a day per key. Deepgram Aura-2 is the fallback and the draft voice.
+// at ~100 requests a day per key. Deepgram Aura-2 is used only when asked for explicitly.
 // Generated audio is imported into the media library and analyzed like any upload, so it
 // gets a word-timed transcript (Deepgram STT) for captions and ducking.
 //
 // Request discipline, because the Gemini quota is small:
 // - a cache keyed on provider + voice + every segment's text and style: an unchanged line
 //   never costs a request again;
-// - a daily ledger shared by all projects (the quota is per key, not per project), with a
-//   soft cap below Google's limit and a per-minute throttle;
-// - a 429 for the day marks Gemini exhausted until the Pacific-time reset, and `auto`
-//   falls back to Deepgram instead of retrying.
+// - a daily ledger per key (by fingerprint, never the key itself), shared by all projects,
+//   with a soft cap below Google's limit and a per-minute throttle;
+// - a 429 for the day marks that key exhausted until the Pacific-time reset;
+// - when Gemini can't be used there is no silent fallback: the error tells the user to
+//   comment out the spent key in .env and add a new one (a new key starts a fresh count).
 import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -114,15 +115,27 @@ export interface Ledger {
   recent: number[];
 }
 
-export function readLedger(now = new Date()): Ledger {
+/** A short one-way fingerprint, so the ledger can tell keys apart without storing them. */
+export const keyFingerprint = (key: string) => createHash('sha256').update(key).digest('hex').slice(0, 8);
+
+function ledgerFile(currentFp: string): Record<string, Ledger> {
+  if (!existsSync(LEDGER_FILE)) return {};
+  const raw = JSON.parse(readFileSync(LEDGER_FILE, 'utf8')) as Record<string, Ledger> | Ledger;
+  // The first version kept one ledger for whatever key was set: it belongs to the current key.
+  return 'day' in raw && typeof raw.day === 'string' ? { [currentFp]: raw as Ledger } : (raw as Record<string, Ledger>);
+}
+
+export function readLedger(fp: string, now = new Date()): Ledger {
   const today = pacificDay(now);
-  const saved = existsSync(LEDGER_FILE) ? (JSON.parse(readFileSync(LEDGER_FILE, 'utf8')) as Ledger) : null;
+  const saved = ledgerFile(fp)[fp];
   return saved && saved.day === today ? saved : { day: today, count: 0, exhausted: false, recent: [] };
 }
 
-function writeLedger(l: Ledger): void {
+function writeLedger(fp: string, l: Ledger): void {
   mkdirSync(join(ROOT, '.cache'), { recursive: true });
-  writeJsonAtomic(LEDGER_FILE, l);
+  // Only today's entries matter; older days are dropped.
+  const keep = Object.fromEntries(Object.entries(ledgerFile(fp)).filter(([k, v]) => k !== fp && v.day === l.day));
+  writeJsonAtomic(LEDGER_FILE, { ...keep, [fp]: l });
 }
 
 /** Soft cap below Google's observed 100/day, leaving room for a manual test or two. */
@@ -135,18 +148,53 @@ export function throttleDelay(recent: number[], limit: number, now = Date.now())
   return window.length < limit ? 0 : window[window.length - limit]! + 60_000 - now + 250;
 }
 
-export function geminiAvailable(): { ok: boolean; reason?: string } {
-  if (!setting('GEMINI_API_KEY')) return { ok: false, reason: 'no GEMINI_API_KEY in .env' };
-  const l = readLedger();
-  if (l.exhausted) return { ok: false, reason: `Google's daily quota is used up (resets at midnight Pacific)` };
-  if (l.count >= dailyCap()) return { ok: false, reason: `today's budget of ${dailyCap()} Gemini requests is spent (GEMINI_TTS_DAILY)` };
+/** The next midnight Pacific, in the user's local time ("12:45 pm"). */
+export function resetTime(now = new Date()): string {
+  const today = pacificDay(now);
+  let t = now.getTime();
+  for (let step = 3_600_000; step >= 60_000; step /= 60) {
+    while (pacificDay(new Date(t + step)) === today) t += step;
+  }
+  return new Date(t + 60_000).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+}
+
+const currentKey = () => setting('GEMINI_API_KEY');
+
+export function geminiAvailable(): { ok: true } | { ok: false; reason: string; hasKey: boolean } {
+  const key = currentKey();
+  if (!key) return { ok: false, reason: 'there is no GEMINI_API_KEY in .env', hasKey: false };
+  const l = readLedger(keyFingerprint(key));
+  if (l.exhausted) return { ok: false, reason: `Google refused the current key (${keyFingerprint(key)}) for today: its daily quota is used up`, hasKey: true };
+  if (l.count >= dailyCap()) return { ok: false, reason: `the current key (${keyFingerprint(key)}) has used today's budget of ${dailyCap()} requests (GEMINI_TTS_DAILY)`, hasKey: true };
   return { ok: true };
 }
 
+/** Thrown instead of falling back: the user decides whether to swap keys, wait or use Deepgram. */
+export class GeminiUnavailable extends Error {}
+
+export function unavailableMessage(reason: string, hasKey: boolean): string {
+  const steps = hasKey
+    ? [
+        `  1. Comment out the current key line:  # GEMINI_API_KEY=…   (keep it: it works again after the reset)`,
+        `  2. Add a new line below it:           GEMINI_API_KEY=<new key from aistudio.google.com>`,
+      ]
+    : [`  Add a line:  GEMINI_API_KEY=<key from aistudio.google.com>`];
+  return [
+    `Gemini TTS is not available: ${reason}.`,
+    `Not falling back to Deepgram. Ask the user to update .env (they paste keys themselves; never print them):`,
+    ...steps,
+    `Then rerun the same ev tts command; lines already generated are cached and cost nothing.`,
+    ...(hasKey ? [`Or wait for the reset at ${resetTime()} (midnight Pacific).`] : []),
+    `Use Deepgram only if the user explicitly asks for it: --provider=deepgram.`,
+  ].join('\n');
+}
+
 export function usageSummary(): string {
-  const l = readLedger();
-  const cap = dailyCap();
-  return `Gemini TTS today (${l.day}, Pacific): ${l.count}/${cap} requests${l.exhausted ? ' · Google says the quota is used up' : ''} · resets at midnight Pacific`;
+  const key = currentKey();
+  if (!key) return 'Gemini TTS: no GEMINI_API_KEY in .env';
+  const fp = keyFingerprint(key);
+  const l = readLedger(fp);
+  return `Gemini TTS today (${l.day}, Pacific), key ${fp}: ${l.count}/${dailyCap()} requests${l.exhausted ? ' · Google says this key is used up' : ''} · resets at ${resetTime()} your time`;
 }
 
 // ---- Providers -------------------------------------------------------------------------
@@ -164,15 +212,16 @@ class QuotaError extends Error {
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 async function geminiRequest(segments: SpeechSegment[], voice: GeminiVoice): Promise<Buffer> {
-  const key = setting('GEMINI_API_KEY');
-  if (!key) throw new Error('needs GEMINI_API_KEY in .env');
-  const wait = throttleDelay(readLedger().recent, perMinute());
+  const key = currentKey();
+  if (!key) throw new GeminiUnavailable(unavailableMessage('there is no GEMINI_API_KEY in .env', false));
+  const fp = keyFingerprint(key);
+  const wait = throttleDelay(readLedger(fp).recent, perMinute());
   if (wait > 0) await sleep(wait);
 
   // Count the attempt before sending: a request that fails still spends quota.
   const now = Date.now();
-  const ledger = readLedger();
-  writeLedger({ ...ledger, count: ledger.count + 1, recent: [...ledger.recent.filter((t) => now - t < 60_000), now] });
+  const ledger = readLedger(fp);
+  writeLedger(fp, { ...ledger, count: ledger.count + 1, recent: [...ledger.recent.filter((t) => now - t < 60_000), now] });
 
   // The Interactions API reads `text` strictly verbatim; styles go in speech_metadata.
   // (generateContent speaks any instructions placed in the prompt.)
@@ -219,8 +268,9 @@ async function geminiSpeech(segments: SpeechSegment[], voice: GeminiVoice): Prom
   } catch (err) {
     if (!(err instanceof QuotaError)) throw err;
     if (err.daily) {
-      writeLedger({ ...readLedger(), exhausted: true });
-      throw err;
+      const fp = keyFingerprint(currentKey() ?? '');
+      writeLedger(fp, { ...readLedger(fp), exhausted: true });
+      throw new GeminiUnavailable(unavailableMessage(`Google refused the current key (${fp}) for today: ${err.message}`, true));
     }
     await sleep(Math.min(err.retryMs, 65_000));
     return geminiRequest(segments, voice);
@@ -255,9 +305,9 @@ export function cacheKey(provider: TtsProvider, voice: string, segments: SpeechS
 }
 
 export interface SpeechOptions {
-  /** `auto` (default): Gemini when a key and budget are available, otherwise Deepgram. */
-  provider?: TtsProvider | 'auto';
-  /** A Gemini voice name or a Deepgram model id. */
+  /** `gemini` (default). `deepgram` only when the user explicitly asked for it. */
+  provider?: TtsProvider;
+  /** A Gemini voice name, or a Deepgram model id (which implies `deepgram`). */
   voice?: string;
 }
 
@@ -266,22 +316,15 @@ export interface SpeechResult {
   cached: boolean;
   provider: TtsProvider;
   voice: string;
-  /** Why the preferred provider wasn't used, if it wasn't. */
-  fellBack?: string;
 }
 
 /** Deepgram stand-in for a Gemini voice: same gender. */
 const deepgramFor = (voice: string) => (isGeminiVoice(voice) && GEMINI_VOICES[voice].gender === 'male' ? DEEPGRAM_MALE_VOICE : (setting('DEEPGRAM_TTS_VOICE') ?? DEEPGRAM_DEFAULT_VOICE));
 
-export async function synthesizeSpeech(segments: SpeechSegment[], { provider = 'auto', voice }: SpeechOptions = {}): Promise<SpeechResult> {
+export async function synthesizeSpeech(segments: SpeechSegment[], { provider, voice }: SpeechOptions = {}): Promise<SpeechResult> {
   const clean = segments.map((s) => ({ text: s.text.trim(), ...(s.style?.trim() ? { style: s.style.trim() } : {}) })).filter((s) => s.text);
   if (!clean.length) throw new Error('nothing to say');
-
-  const geminiVoice = voice && isGeminiVoice(voice) ? voice : voice ? null : ((setting('GEMINI_TTS_VOICE') as GeminiVoice | undefined) ?? DEFAULT_GEMINI_VOICE);
-  if (provider === 'gemini' && !geminiVoice) throw new Error(`"${voice}" is not a Gemini voice (see: ev tts --voices)`);
-  const wantGemini = provider === 'gemini' || (provider === 'auto' && geminiVoice !== null);
-  const dgVoice = voice && !isGeminiVoice(voice) ? voice : deepgramFor(geminiVoice ?? '');
-  if (!/^[\w.-]+$/.test(dgVoice)) throw new Error(`invalid voice "${dgVoice}"`);
+  const useDeepgram = provider === 'deepgram' || (!provider && !!voice && !isGeminiVoice(voice));
 
   const hit = (p: TtsProvider, v: string) => {
     const id = cache()[cacheKey(p, v, clean)];
@@ -297,29 +340,21 @@ export async function synthesizeSpeech(segments: SpeechSegment[], { provider = '
     return asset;
   };
 
-  let fellBack: string | undefined;
-  if (wantGemini && geminiVoice) {
-    const cached = hit('gemini', geminiVoice);
-    if (cached) return { asset: cached, cached: true, provider: 'gemini', voice: geminiVoice };
-    const chars = clean.reduce((n, s) => n + s.text.length, 0);
-    if (chars > GEMINI_MAX_CHARS) throw new Error(`${chars} characters in one request; keep Gemini requests to one scene (≤ ${GEMINI_MAX_CHARS} characters, ~20 s of speech)`);
-    const available = geminiAvailable();
-    if (available.ok) {
-      try {
-        return { asset: store(await geminiSpeech(clean, geminiVoice), 'gemini', geminiVoice), cached: false, provider: 'gemini', voice: geminiVoice };
-      } catch (err) {
-        if (!(err instanceof QuotaError) || provider === 'gemini') throw err;
-        fellBack = err.message;
-      }
-    } else if (provider === 'gemini') {
-      throw new Error(`Gemini unavailable: ${available.reason}`);
-    } else {
-      fellBack = available.reason;
-    }
+  if (useDeepgram) {
+    const dgVoice = voice && !isGeminiVoice(voice) ? voice : deepgramFor(voice ?? '');
+    if (!/^[\w.-]+$/.test(dgVoice)) throw new Error(`invalid voice "${dgVoice}"`);
+    const cached = hit('deepgram', dgVoice);
+    if (cached) return { asset: cached, cached: true, provider: 'deepgram', voice: dgVoice };
+    return { asset: store(await deepgramSpeech(plainText(clean), dgVoice), 'deepgram', dgVoice), cached: false, provider: 'deepgram', voice: dgVoice };
   }
 
-  const cached = hit('deepgram', dgVoice);
-  if (cached) return { asset: cached, cached: true, provider: 'deepgram', voice: dgVoice, fellBack };
-  const audio = await deepgramSpeech(plainText(clean), dgVoice);
-  return { asset: store(audio, 'deepgram', dgVoice), cached: false, provider: 'deepgram', voice: dgVoice, fellBack };
+  const geminiVoice = voice ?? setting('GEMINI_TTS_VOICE') ?? DEFAULT_GEMINI_VOICE;
+  if (!isGeminiVoice(geminiVoice)) throw new Error(`"${geminiVoice}" is not a Gemini voice (see: ev tts --voices)`);
+  const cached = hit('gemini', geminiVoice);
+  if (cached) return { asset: cached, cached: true, provider: 'gemini', voice: geminiVoice };
+  const chars = clean.reduce((n, s) => n + s.text.length, 0);
+  if (chars > GEMINI_MAX_CHARS) throw new Error(`${chars} characters in one request; keep Gemini requests to one scene (≤ ${GEMINI_MAX_CHARS} characters, ~20 s of speech)`);
+  const available = geminiAvailable();
+  if (!available.ok) throw new GeminiUnavailable(unavailableMessage(available.reason, available.hasKey));
+  return { asset: store(await geminiSpeech(clean, geminiVoice), 'gemini', geminiVoice), cached: false, provider: 'gemini', voice: geminiVoice };
 }

@@ -177,9 +177,10 @@ Before adding or changing any sound effect, read `SOUND.md`.
   - `ev sfx-get <id>...` imports: trimmed, -1 dBFS, licence recorded. It prints `at={frame - N}` so the sound's peak lands on `frame`.
   - `ev sfx-credits` lists credits for any non-CC0 sound in use. Needs `FREESOUND_API_KEY` in `.env`.
   - New providers implement `SoundSource` in `server/media/sources/` and register in its `index.ts`.
-- **Voiceover:** `ev tts "<text>" --voice=<Name> [--style="…"]` uses Gemini 3.8 Flash TTS (the user's free `GEMINI_API_KEY`), and falls back to Deepgram Aura-2 when Gemini isn't available.
+- **Voiceover:** `ev tts "<text>" --voice=<Name> [--style="…"]` uses Gemini 3.8 Flash TTS (the user's free `GEMINI_API_KEY`).
+  - **No silent fallback.** When Gemini is unavailable (the key's budget is spent, Google refuses, or there's no key), `ev tts` stops. Ask the user to comment out the current `GEMINI_API_KEY` line in `.env` and add a new key, or to wait for the reset. Use Deepgram (`--provider=deepgram`) only if they explicitly ask.
   - `"[[style]] text [[style]] text"` gives several deliveries in one request. The text is spoken verbatim; styles are never spoken. Inline tags like `<short pause>` and `<chuckle>` work.
-  - The quota is about 100 requests a day per key. A ledger in `.cache/` caps use at 90 and throttles to 8 a minute. Cache hits cost nothing. Use one request per scene, generate only once the script is locked, and check with `ev tts --usage`.
+  - The quota is about 100 requests a day per key. A per-key ledger in `.cache/` caps use at 90 and throttles to 8 a minute; a new key starts a fresh count. Cache hits cost nothing. Use one request per scene, generate only once the script is locked, and check with `ev tts --usage`.
   - Cast the voice to the content: `ev tts --voices` and the skill's `references/voice-casting.md`.
   - Every new take is transcribed for word timings and checked against the script.
   - Use `<Voiceover id at />`, and `<Captions assetId={voiceId} offset={-at/fps} />` for captions.

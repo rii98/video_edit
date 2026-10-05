@@ -126,7 +126,7 @@ Follow `references/assets.md`. For every asset in the storyboard:
 - Download into the scratchpad, **Read each image to check it**, then `ev ingest <file>`.
 - Record every external asset in `project/intake/credits.md`: asset id, what it is, source URL, author, licence, required attribution.
 - Code it instead (SVG, CSS, Remotion shapes) when the content is a diagram, map, chart, icon system, abstract concept or a style the footage can't give, and when coding it will look intentional rather than clip-art.
-- **Voice:** only once the script is locked, run `ev tts "[[style]] text [[style]] text" --voice=<Name>`, **one request per scene**, following the budget rules in `voice-casting.md` (≤ ~15 Gemini requests per video, `ev tts --usage` before a batch, retakes only on evidence). Check each take's transcript line (`✓` or a warning), and set scene lengths from the takes. Use `--provider=deepgram` for scratch VO while timing is still moving.
+- **Voice:** only once the script is locked, run `ev tts "[[style]] text [[style]] text" --voice=<Name>`, **one request per scene**, following the budget rules in `voice-casting.md` (≤ ~15 Gemini requests per video, `ev tts --usage` before a batch, retakes only on evidence). Check each take's transcript line (`✓` or a warning), and set scene lengths from the takes. If `ev tts` stops with "Gemini TTS is not available", **don't switch providers**: ask the user to swap the key in `.env` or wait for the reset, exactly as `voice-casting.md` describes, and keep building everything else meanwhile.
 - Music and SFX: read `SOUND.md`; `ev sfx` / `ev sfx-find` / `ev sfx-get`.
 
 ## Phase 8: Build version 1

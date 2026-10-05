@@ -23,7 +23,7 @@ For Claude Code: when the user asks to set up this repo (or after a fresh clone)
    - Run `npm run ev` to confirm the bridge CLI works.
 7. **Run the e2e tests.** Run `npm run e2e` and look at `test-results/screens/`. The e2e tests must clean up after themselves.
 8. **Save these preferences to memory:**
-   - Never use the macOS `say` voice. Use Deepgram TTS with the user's key, or their own recordings. Sound effects come from `ev sfx`.
+   - Never use the macOS `say` voice. Use Gemini TTS with the user's key, or their own recordings. Deepgram TTS only when the user asks. Sound effects come from `ev sfx`.
    - Use Playwright, not Claude-in-Chrome, for UI checks. E2E tests must clean up and must never touch the user's media, apply themes or create versions.
    - Video projects (`project/`, `projects/`) are not in this repo. Each new video starts with `ev project new "<name>"`.
 
