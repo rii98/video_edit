@@ -23,6 +23,7 @@ The editor runs at http://127.0.0.1:5173 (`npm run dev` if it isn't running). Al
 | `references/research-sources.md` | Where to find inspiration, craft knowledge, fonts, trends, and how to search each | Phase 4 |
 | `references/editor-playbook.md` | The craft catalogue: structure, pacing, A/B-roll, shot sizes, angles, camera moves, transitions, type, layout, layering, split screen, PiP, speed, colour, motion, sound, genre playbooks | Phases 4–8 |
 | `references/writing.md` | Hooks, structure, script and on-screen copy, storyboard format | Phase 6 |
+| `references/voice-casting.md` | Choosing the voice for the content (gender, tone, genre), directing it with style notes and tags, and the Gemini request budget | Phases 3, 6, 7 |
 | `references/assets.md` | Finding, judging, downloading and crediting real images, logos, people, books, footage; when to code SVG instead | Phase 7 |
 | `references/ai-tells.md` | What makes a video look generated and sloppy, and the final QA pass | Before Phase 5 and Phase 9 |
 
@@ -73,7 +74,7 @@ Tailor every option to *their* material and idea. Skip anything already answered
 - **Length**: 15 / 30 / 60 s or longer, based on platform and material.
 
 **Round 2, only if still needed (up to 4)**
-- **Voice** (idea-led): Deepgram voiceover (`ev tts`), their own recording, or text-only. Never the macOS `say` voice.
+- **Voice** (idea-led): generated voiceover (Gemini TTS, cast by you to fit the content), their own recording, or text-only. Never the macOS `say` voice. Offer a gender or tone choice only if the brief makes it matter (a brand persona, a female founder's story); otherwise cast it yourself from `voice-casting.md` and say who you picked.
 - **Pacing**: calm / rhythmic / fast.
 - **Must-haves**: logo, CTA, captions, brand colours, names, facts that must appear.
 - **Anything to avoid.**
@@ -114,6 +115,7 @@ Verify and loop until clean:
 
 Follow `references/writing.md`.
 1. **Script** (`project/intake/script.md`): hook, beats, voiceover and/or on-screen copy, with timings. Voiceover runs at about 2.5 words per second; on-screen text needs about 3 words per second plus 0.5 s to land. Read it aloud in your head against the clock; cut until it fits with room to breathe.
+   - **Cast the narrator** with `voice-casting.md` and note the choice and the reason at the top of the script. Write a style note for each change of meaning and place inline tags (`<short pause>`, `<chuckle>`) where the delivery needs them.
 2. **Storyboard / shot list** (`project/intake/storyboard.md`): one row per shot with timing, purpose, A/B-roll, shot size and angle, camera move (real or virtual), type and graphics, transition in and out and its motivation, sound, and the asset it needs. Use the playbook for each choice.
 3. If the user should see the plan before a long build (idea-led videos over ~30 s), post the scene list in the request thread with `ev reply <id> "<scene list>"` and keep going; don't block on it unless a choice is genuinely theirs.
 
@@ -124,7 +126,8 @@ Follow `references/assets.md`. For every asset in the storyboard:
 - Download into the scratchpad, **Read each image to check it**, then `ev ingest <file>`.
 - Record every external asset in `project/intake/credits.md`: asset id, what it is, source URL, author, licence, required attribution.
 - Code it instead (SVG, CSS, Remotion shapes) when the content is a diagram, map, chart, icon system, abstract concept or a style the footage can't give, and when coding it will look intentional rather than clip-art.
-- Voice: `ev tts "<script>"` for voiceover (Deepgram). Music and SFX: read `SOUND.md`; `ev sfx` / `ev sfx-find` / `ev sfx-get`.
+- **Voice:** only once the script is locked, run `ev tts "[[style]] text [[style]] text" --voice=<Name>`, **one request per scene**, following the budget rules in `voice-casting.md` (≤ ~15 Gemini requests per video, `ev tts --usage` before a batch, retakes only on evidence). Check each take's transcript line (`✓` or a warning), and set scene lengths from the takes. Use `--provider=deepgram` for scratch VO while timing is still moving.
+- Music and SFX: read `SOUND.md`; `ev sfx` / `ev sfx-find` / `ev sfx-get`.
 
 ## Phase 8: Build version 1
 

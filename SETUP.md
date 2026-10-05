@@ -15,6 +15,7 @@ For Claude Code: when the user asks to set up this repo (or after a fresh clone)
    - `DEEPGRAM_API_KEY=`: voiceover and transcripts.
    - `FREESOUND_API_KEY=`: stock sounds (`ev sfx-find`).
    - `UNSPLASH_ACCESS_KEY=`: stock photos for the new-video pipeline. Only the Access Key is needed, not the Secret Key.
+   - `GEMINI_API_KEY=`: voiceover (Gemini TTS; free key from aistudio.google.com). Deepgram stays as the fallback and for transcripts.
 5. **Run checks.** Run `npm run typecheck` and `npm test`. Fix anything that's environment-related. Don't change the editor's behavior.
 6. **Start the editor.** Run `npm run dev` in the background.
    - Confirm http://127.0.0.1:5173 loads.

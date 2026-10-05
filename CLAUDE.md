@@ -177,8 +177,11 @@ Before adding or changing any sound effect, read `SOUND.md`.
   - `ev sfx-get <id>...` imports: trimmed, -1 dBFS, licence recorded. It prints `at={frame - N}` so the sound's peak lands on `frame`.
   - `ev sfx-credits` lists credits for any non-CC0 sound in use. Needs `FREESOUND_API_KEY` in `.env`.
   - New providers implement `SoundSource` in `server/media/sources/` and register in its `index.ts`.
-- **Voiceover:** `ev tts "<text>" [--voice=aura-2-…]` calls Deepgram with the user's key from `.env`.
-  - Results are cached per text and voice, and transcribed for word timings.
+- **Voiceover:** `ev tts "<text>" --voice=<Name> [--style="…"]` uses Gemini 3.8 Flash TTS (the user's free `GEMINI_API_KEY`), and falls back to Deepgram Aura-2 when Gemini isn't available.
+  - `"[[style]] text [[style]] text"` gives several deliveries in one request. The text is spoken verbatim; styles are never spoken. Inline tags like `<short pause>` and `<chuckle>` work.
+  - The quota is about 100 requests a day per key. A ledger in `.cache/` caps use at 90 and throttles to 8 a minute. Cache hits cost nothing. Use one request per scene, generate only once the script is locked, and check with `ev tts --usage`.
+  - Cast the voice to the content: `ev tts --voices` and the skill's `references/voice-casting.md`.
+  - Every new take is transcribed for word timings and checked against the script.
   - Use `<Voiceover id at />`, and `<Captions assetId={voiceId} offset={-at/fps} />` for captions.
   - **Never use the macOS `say` voice.** Never print or commit keys.
 - **Ducking:**

@@ -59,7 +59,7 @@ Length: 30 s · VO 68 words (2.3 wps) · Format: 1080×1920
 | … | | | |
 ```
 
-Mark emphasis words in **bold** (they get the kinetic treatment) and pauses with `/`.
+Mark emphasis words in **bold** (they get the kinetic treatment). Put the narrator choice at the top ("Narrator: Kore, female, firm. Confident clarity for a finance audience") and write each scene's VO the way `ev tts` takes it: a `[[style]]` note where the delivery changes, and inline tags such as `<short pause>` where they belong (see `voice-casting.md`). Example: `[[low, ominous, slow]] Rome didn't fall in a day. <long pause> [[matter-of-fact]] It took three hundred years.`
 
 ## 6. Storyboard / shot list
 

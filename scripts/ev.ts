@@ -45,7 +45,10 @@ const HELP = `ev: Easy Video bridge for Claude
   occupancy <id>         Sheet of the top and bottom bands of every second: where can new graphics go?
   remove <id> [--force]  Delete an asset (refuses while scenes use it)
   sfx <kind|all> [--seed=N] [--seconds=S]   Synthesize sound effects into the library
-  tts "<text>" [--voice=aura-2-…]  Generate a voiceover with Deepgram (cached per text+voice)
+  tts "<text>" [--voice=Charon] [--style="…"] [--provider=auto|gemini|deepgram]
+                         Voiceover: Gemini (directable, ~100 free requests/day) with Deepgram fallback.
+                         "[[style]] text [[style]] text" = several deliveries in one request. Cached.
+  tts --voices | --usage Gemini voices (gender, tone, fits) | today's Gemini request count
   sfx-find "<query>" [--min=S --max=S --license=cc0 --sort=popular --limit=N]
                          Search stock sounds (Freesound, CC0 by default); --similar=<id> finds more like one
   sfx-get <id>... [--raw]  Import stock sounds: trimmed, -1 dBFS, peak time and licence recorded
@@ -449,14 +452,44 @@ async function cmdSfx(args: string[]) {
 }
 
 async function cmdTts(args: string[]) {
-  const { synthesizeSpeech } = await import('../server/media/tts.ts');
+  const tts = await import('../server/media/tts.ts');
   const { analyzeAsset } = await import('../server/media/analyze.ts');
-  const voice = args.find((a) => a.startsWith('--voice='))?.split('=')[1];
-  const text = args.filter((a) => !a.startsWith('--')).join(' ');
-  if (!text.trim()) fail('usage: tts "<text>" [--voice=aura-2-thalia-en]');
-  const { asset, cached } = await synthesizeSpeech(text, voice);
-  const done = cached ? asset : await analyzeAsset(asset.id, { log: (m) => console.log(`  ${m}`) });
-  console.log(`${asset.id}${cached ? ' (cached, no API call)' : ''}  ${done?.facts.join(' · ') ?? ''}\n<Voiceover id="${asset.id}" at={…} />`);
+  const { opts, words } = options(args);
+  if (words.includes('--usage')) return console.log(tts.usageSummary());
+  if (words.includes('--voices')) {
+    console.log(`Gemini voices (${tts.GEMINI_MODEL}). Cast by content: .claude/skills/new-video/references/voice-casting.md`);
+    for (const [name, v] of Object.entries(tts.GEMINI_VOICES)) console.log(`  ${name.padEnd(14)} ${v.gender.padEnd(7)} ${v.tone.padEnd(14)} ${v.fits}`);
+    return;
+  }
+  const text = words.join(' ');
+  const provider = opts.provider as 'auto' | 'gemini' | 'deepgram' | undefined;
+  if (!text.trim() || (provider && !['auto', 'gemini', 'deepgram'].includes(provider))) {
+    fail('usage: tts "<text>" [--voice=Charon] [--style="warm, unhurried"] [--provider=auto|gemini|deepgram]\n' +
+      '       per-segment styles in one request: "[[deep, ominous]] In a world… [[hushed]] No templates."\n' +
+      '       tts --voices | tts --usage');
+  }
+  const segments = tts.parseSegments(text, opts.style);
+  const r = await tts.synthesizeSpeech(segments, { provider, voice: opts.voice });
+  if (r.fellBack) console.log(`  ⚠ used Deepgram (${r.voice}): ${r.fellBack}`);
+  const done = r.cached ? r.asset : await analyzeAsset(r.asset.id);
+  console.log(`${r.asset.id}  ${r.provider}/${r.voice}${r.cached ? ' (cached, no API call)' : ''}  ${done?.facts.join(' · ') ?? ''}`);
+
+  // Free check (Deepgram STT already ran): a take that says much more than the script read a
+  // style note aloud; much less means it was cut off or skipped words.
+  if (!r.cached && done) {
+    const { analysisDir } = await import('../server/media/library.ts');
+    const file = join(analysisDir(done.id), 'transcript.json');
+    const expected = tts.spokenWords(segments);
+    if (existsSync(file) && expected >= 4) {
+      const heard = (JSON.parse(readFileSync(file, 'utf8')) as { words: unknown[] }).words.length;
+      const ratio = heard / expected;
+      if (ratio > 1.35) console.log(`  ⚠ heard ${heard} words for a ${expected}-word script: it probably spoke a style note. Check the transcript (ev media ${done.id}).`);
+      else if (ratio < 0.7) console.log(`  ⚠ heard only ${heard} of ${expected} words: the take may be cut off. Check it before using it.`);
+      else console.log(`  ✓ transcript matches the script (${heard}/${expected} words)`);
+    }
+  }
+  if (r.provider === 'gemini' && !r.cached) console.log(`  ${tts.usageSummary()}`);
+  console.log(`<Voiceover id="${r.asset.id}" at={…} />`);
 }
 
 const SFX_FIND_USAGE = 'usage: sfx-find "<query>" | --similar=<id>  [--min=S] [--max=S] [--license=cc0[,by,by-nc]] [--sort=popular|relevant|rated|shortest|newest] [--limit=N] [--source=freesound]';
@@ -778,7 +811,7 @@ const commands: Record<string, (args: string[]) => unknown> = {
   remove: cmdRemove,
   occupancy: cmdOccupancy,
   reference: cmdReference,
-  tts: cmdTts,
+  tts: oneLineErrors(cmdTts),
   'sfx-find': oneLineErrors(cmdSfxFind),
   'sfx-get': oneLineErrors(cmdSfxGet),
   'sfx-credits': cmdSfxCredits,
