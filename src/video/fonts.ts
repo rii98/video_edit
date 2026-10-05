@@ -12,6 +12,7 @@ import { loadFont as jetBrainsMono } from '@remotion/google-fonts/JetBrainsMono'
 import { loadFont as manrope } from '@remotion/google-fonts/Manrope';
 import { loadFont as spaceGrotesk } from '@remotion/google-fonts/SpaceGrotesk';
 import { loadFont as syne } from '@remotion/google-fonts/Syne';
+import { loadFont as unbounded } from '@remotion/google-fonts/Unbounded';
 
 type Loader = () => { fontFamily: string };
 // Only the weights and subset we use: each extra weight is another network request at render.
@@ -31,6 +32,7 @@ const loaders: Record<string, { load: Loader; fallback: string }> = {
   Nunito: { load: () => nunito('normal', opts(['400', '700', '800'])), fallback: 'Helvetica, Arial, sans-serif' },
   Caveat: { load: () => caveat('normal', opts(['600', '700'])), fallback: 'cursive' },
   Syne: { load: () => syne('normal', opts(['600', '700'])), fallback: 'Helvetica, Arial, sans-serif' },
+  Unbounded: { load: () => unbounded('normal', opts(['300', '500', '700'])), fallback: 'Helvetica, Arial, sans-serif' },
 };
 
 export const FONT_NAMES = Object.keys(loaders);

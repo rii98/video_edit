@@ -72,12 +72,15 @@ export async function runExport(preset: ExportPreset, log: (m: string) => void =
     log('bundling…');
     const serveUrl = await bundleVideo();
     const inputProps: MainProps = { pin: null, region: null, proxy: false };
-    const composition = await selectComposition({ serveUrl, id: 'Main', inputProps });
+    // ANGLE so WebGL (Three.js scenes) renders headless.
+    const chromiumOptions = { gl: 'angle' } as const;
+    const composition = await selectComposition({ serveUrl, id: 'Main', inputProps, chromiumOptions });
     let lastSaved = 0;
     await renderMedia({
       serveUrl,
       composition,
       inputProps,
+      chromiumOptions,
       codec: 'h264',
       crf: settings.crf,
       scale: settings.scale,

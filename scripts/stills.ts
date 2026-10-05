@@ -39,14 +39,15 @@ export async function bundleVideo(entryPoint = join(ROOT, 'src/video/index.ts'))
 /** `entryPoint` lets version comparisons render an older project from a scratch workspace. */
 export async function renderStills(jobs: StillJob[], { entryPoint = join(ROOT, 'src/video/index.ts') } = {}): Promise<string[]> {
   const serveUrl = await bundleVideo(entryPoint);
-  const browser = await openBrowser('chrome');
+  // ANGLE: WebGL (Three.js scenes) doesn't render with Chromium's default GL in headless mode.
+  const browser = await openBrowser('chrome', { chromiumOptions: { gl: 'angle' } });
   try {
     const base: MainProps = { pin: null, region: null, proxy: true };
     const compositions = new Map<string, Awaited<ReturnType<typeof selectComposition>>>();
     const outputs: string[] = [];
     for (const job of jobs) {
       const id = job.composition ?? 'Main';
-      if (!compositions.has(id)) compositions.set(id, await selectComposition({ serveUrl, id, inputProps: { ...base }, puppeteerInstance: browser }));
+      if (!compositions.has(id)) compositions.set(id, await selectComposition({ serveUrl, id, inputProps: { ...base }, puppeteerInstance: browser, chromiumOptions: { gl: 'angle' } }));
       const composition = compositions.get(id)!;
       const frame = Math.min(Math.max(0, job.frame), composition.durationInFrames - 1);
       // In Remotion v4 the component receives composition.props, not inputProps, so a
@@ -61,6 +62,7 @@ export async function renderStills(jobs: StillJob[], { entryPoint = join(ROOT, '
         scale: SCALE,
         imageFormat: 'png',
         puppeteerInstance: browser,
+        chromiumOptions: { gl: 'angle' },
       });
       outputs.push(job.output);
     }

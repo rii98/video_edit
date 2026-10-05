@@ -2,3 +2,5 @@
 import { Config } from '@remotion/cli/config';
 
 Config.setPublicDir('project/media');
+// WebGL (Three.js scenes) needs ANGLE when rendering headless.
+Config.setChromiumOpenGlRenderer('angle');

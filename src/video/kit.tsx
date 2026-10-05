@@ -108,7 +108,7 @@ export function MediaModeProvider({ proxy, children }: { proxy: boolean; childre
   return <MediaModeContext.Provider value={{ proxy }}>{children}</MediaModeContext.Provider>;
 }
 
-function useAssetSrc(id: string): string | null {
+export function useAssetSrc(id: string): string | null {
   const { proxy } = useContext(MediaModeContext);
   const asset = media.assets[id];
   if (!asset) return null;
