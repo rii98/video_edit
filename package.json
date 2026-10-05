@@ -11,6 +11,7 @@
     "e2e": "playwright test"
   },
   "dependencies": {
+    "@mediapipe/tasks-vision": "^1.0.1",
     "@react-three/fiber": "^9.8.1",
     "@remotion/bundler": "^4.0.532",
     "@remotion/cli": "^4.0.532",

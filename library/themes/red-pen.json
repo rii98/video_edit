@@ -1,0 +1,29 @@
+{
+  "name": "Red Pen",
+  "description": "Teacher's marking on warm paper: red-pen corrections in marker, green ticks, black block caps. Language lessons, corrections, myth vs fact, 'say this not that'.",
+  "colors": {
+    "bg": "#F3EDDF",
+    "surface": "#FFFDF6",
+    "text": "#1B1A17",
+    "muted": "#7C766A",
+    "accent": "#E1251B",
+    "accent2": "#169A52"
+  },
+  "fonts": {
+    "display": "Archivo Black",
+    "body": "Archivo",
+    "mono": "Permanent Marker"
+  },
+  "type": {
+    "displayWeight": 400,
+    "displayTracking": "-0.01em",
+    "uppercaseDisplay": true
+  },
+  "easing": {
+    "standard": [0.22, 1, 0.36, 1],
+    "emphasized": [0.68, -0.4, 0.32, 1.4]
+  },
+  "tempo": 1,
+  "stagger": 3,
+  "radius": 10
+}

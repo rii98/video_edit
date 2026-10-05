@@ -1,0 +1,29 @@
+{
+  "name": "Velvet Cinema",
+  "description": "Film-title talking head: graded dark frame, italic Instrument Serif headlines with tight sans labels, ember accent, slow push-ins and 3D type in space. Premium personal brands and lessons that should feel like a short film.",
+  "colors": {
+    "bg": "#09090B",
+    "surface": "#141418",
+    "text": "#F3EDE3",
+    "muted": "#8D8780",
+    "accent": "#FF6A3D",
+    "accent2": "#CDA86C"
+  },
+  "fonts": {
+    "display": "Instrument Serif",
+    "body": "Inter Tight",
+    "mono": "JetBrains Mono"
+  },
+  "type": {
+    "displayWeight": 400,
+    "displayTracking": "-0.02em",
+    "uppercaseDisplay": false
+  },
+  "easing": {
+    "standard": [0.16, 1, 0.3, 1],
+    "emphasized": [0.83, 0, 0.17, 1]
+  },
+  "tempo": 1.1,
+  "stagger": 4,
+  "radius": 6
+}

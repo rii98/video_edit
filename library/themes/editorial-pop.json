@@ -1,0 +1,29 @@
+{
+  "name": "Editorial Pop",
+  "description": "Bold creator-editorial: near-black with warm-white type, one ultramarine accent and a red strike for 'wrong'. Huge Bricolage Grotesque, text behind the speaker, snappy but clean. Talking-head tips, language and vocabulary, opinion shorts.",
+  "colors": {
+    "bg": "#0E0E10",
+    "surface": "#1A1A1F",
+    "text": "#FFF8EE",
+    "muted": "#A39C92",
+    "accent": "#3050FF",
+    "accent2": "#FF3B2F"
+  },
+  "fonts": {
+    "display": "Bricolage Grotesque",
+    "body": "Inter Tight",
+    "mono": "JetBrains Mono"
+  },
+  "type": {
+    "displayWeight": 800,
+    "displayTracking": "-0.045em",
+    "uppercaseDisplay": false
+  },
+  "easing": {
+    "standard": [0.16, 1, 0.3, 1],
+    "emphasized": [0.87, 0, 0.13, 1]
+  },
+  "tempo": 0.9,
+  "stagger": 2,
+  "radius": 14
+}

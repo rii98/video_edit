@@ -162,7 +162,8 @@ const steps: Record<AnalysisStep, Step> = {
 
   async beats(a) {
     if (a.origin === 'sfx' || a.origin === 'tts') return { state: 'skipped', note: 'generated audio' };
-    if (a.origin === 'stock') return { state: 'skipped', note: 'sound effect' };
+    // Long stock sounds are music beds (Freesound has CC0 tracks); those need beats like any song.
+    if (a.origin === 'stock' && (a.duration ?? 0) < 20) return { state: 'skipped', note: 'sound effect' };
     const pcm = await decodePcm(src(a), SAMPLE_RATE, BEAT_MAX_SECONDS);
     const result = analyzeBeats(pcm);
     writeJsonAtomic(out(a, 'beats.json'), result);

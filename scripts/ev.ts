@@ -43,6 +43,8 @@ const HELP = `ev: Easy Video bridge for Claude
   analyze <id> [--redo=step,step]  Re-run analysis steps (e.g. --redo=transcript)
   reference <file|url>   Shot-by-shot breakdown of someone else's video to learn from (not imported)
   occupancy <id>         Sheet of the top and bottom bands of every second: where can new graphics go?
+  track <id>             Track the person in a video (face, hands, pose, soft mask per frame) for
+                         useTrack / <SubjectMask> in scenes: floating words, glow, type behind, follow-cam
   remove <id> [--force]  Delete an asset (refuses while scenes use it)
   sfx <kind|all> [--seed=N] [--seconds=S]   Synthesize sound effects into the library
   tts "<text>" [--voice=Charon] [--style="…"] [--provider=deepgram]
@@ -397,6 +399,19 @@ async function cmdOccupancy(args: string[]) {
   }
   outs.forEach((o) => console.log(rel(o)));
   console.log('Read both: anything already drawn in a band at a given second (titles, cards, captions) means new graphics there will collide.');
+}
+
+async function cmdTrack(args: string[]) {
+  const { getAsset } = await import('../server/media/library.ts');
+  const { trackAsset } = await import('../server/media/track.ts');
+  const a = args[0] ? getAsset(args[0]) : null;
+  if (!a || a.kind !== 'video') fail('usage: track <video asset id>');
+  const t0 = Date.now();
+  const track = await trackAsset(a.id, a.file, a.duration ?? 0);
+  const n = track.frames.length;
+  const pct = (f: (x: (typeof track.frames)[number]) => boolean) => Math.round((100 * track.frames.filter(f).length) / Math.max(1, n));
+  console.log(`${n} frames in ${Math.round((Date.now() - t0) / 1000)} s · face ${pct((f) => !!f.face)}% · hands ${pct((f) => f.hands.length > 0)}% · pose ${pct((f) => !!f.pose)}% · mask ${pct((f) => !!f.body)}%`);
+  console.log(`In scenes: const track = useTrack('${a.id}'); <SubjectMask id="${a.id}" … />`);
 }
 
 async function cmdReference(args: string[]) {
@@ -810,6 +825,7 @@ const commands: Record<string, (args: string[]) => unknown> = {
   sfx: cmdSfx,
   remove: cmdRemove,
   occupancy: cmdOccupancy,
+  track: cmdTrack,
   reference: cmdReference,
   tts: oneLineErrors(cmdTts),
   'sfx-find': oneLineErrors(cmdSfxFind),

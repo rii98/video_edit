@@ -11,6 +11,9 @@ import sunnyScrapbook from './sunny-scrapbook.json';
 import pastelStorybook from './pastel-storybook.json';
 import caseFileNoir from './case-file-noir.json';
 import cinemaInk from './cinema-ink.json';
+import editorialPop from './editorial-pop.json';
+import redPen from './red-pen.json';
+import velvetCinema from './velvet-cinema.json';
 
 export const themes: Record<string, ThemeTokens> = {
   'warm-editorial': warmEditorial,
@@ -23,4 +26,7 @@ export const themes: Record<string, ThemeTokens> = {
   'pastel-storybook': pastelStorybook,
   'case-file-noir': caseFileNoir,
   'cinema-ink': cinemaInk,
+  'editorial-pop': editorialPop,
+  'red-pen': redPen,
+  'velvet-cinema': velvetCinema,
 };

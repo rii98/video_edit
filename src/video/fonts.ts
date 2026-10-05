@@ -13,6 +13,11 @@ import { loadFont as manrope } from '@remotion/google-fonts/Manrope';
 import { loadFont as spaceGrotesk } from '@remotion/google-fonts/SpaceGrotesk';
 import { loadFont as syne } from '@remotion/google-fonts/Syne';
 import { loadFont as unbounded } from '@remotion/google-fonts/Unbounded';
+import { loadFont as bricolage } from '@remotion/google-fonts/BricolageGrotesque';
+import { loadFont as archivoBlack } from '@remotion/google-fonts/ArchivoBlack';
+import { loadFont as archivo } from '@remotion/google-fonts/Archivo';
+import { loadFont as permanentMarker } from '@remotion/google-fonts/PermanentMarker';
+import { loadFont as interTight } from '@remotion/google-fonts/InterTight';
 
 type Loader = () => { fontFamily: string };
 // Only the weights and subset we use: each extra weight is another network request at render.
@@ -21,7 +26,7 @@ const REGULAR_TO_BOLD = ['400', '500', '600', '700'];
 
 const loaders: Record<string, { load: Loader; fallback: string }> = {
   Inter: { load: () => inter('normal', opts(REGULAR_TO_BOLD)), fallback: 'Helvetica, Arial, sans-serif' },
-  'Instrument Serif': { load: () => instrumentSerif('normal', opts(['400'])), fallback: 'Georgia, serif' },
+  'Instrument Serif': { load: () => (instrumentSerif('italic', opts(['400'])), instrumentSerif('normal', opts(['400']))), fallback: 'Georgia, serif' },
   Anton: { load: () => anton('normal', opts(['400'])), fallback: 'Impact, sans-serif' },
   'DM Sans': { load: () => dmSans('normal', opts(REGULAR_TO_BOLD)), fallback: 'Helvetica, Arial, sans-serif' },
   Manrope: { load: () => manrope('normal', opts(REGULAR_TO_BOLD)), fallback: 'Helvetica, Arial, sans-serif' },
@@ -33,6 +38,11 @@ const loaders: Record<string, { load: Loader; fallback: string }> = {
   Caveat: { load: () => caveat('normal', opts(['600', '700'])), fallback: 'cursive' },
   Syne: { load: () => syne('normal', opts(['600', '700'])), fallback: 'Helvetica, Arial, sans-serif' },
   Unbounded: { load: () => unbounded('normal', opts(['300', '500', '700'])), fallback: 'Helvetica, Arial, sans-serif' },
+  'Bricolage Grotesque': { load: () => bricolage('normal', opts(['400', '800'])), fallback: 'Helvetica, Arial, sans-serif' },
+  'Archivo Black': { load: () => archivoBlack('normal', opts(['400'])), fallback: 'Arial Black, sans-serif' },
+  Archivo: { load: () => archivo('normal', opts(['400', '700'])), fallback: 'Helvetica, Arial, sans-serif' },
+  'Permanent Marker': { load: () => permanentMarker('normal', opts(['400'])), fallback: 'cursive' },
+  'Inter Tight': { load: () => interTight('normal', opts(['400', '600', '800'])), fallback: 'Helvetica, Arial, sans-serif' },
 };
 
 export const FONT_NAMES = Object.keys(loaders);
