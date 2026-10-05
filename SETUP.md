@@ -6,11 +6,15 @@ For Claude Code: when the user asks to set up this repo (or after a fresh clone)
    - Node >= 24. Scripts run `.ts` files directly with `node`. The original machine used v24.21.0.
    - git.
    - Xcode command line tools.
+   - yt-dlp (`pip3 install --user yt-dlp`) so `ev reference <url>` can download reference videos. `ev reference` also finds it in `~/Library/Python/*/bin` if that isn't on PATH.
 
    If something is missing, give the user the exact install command. Don't use Homebrew ffmpeg; the project uses `ffmpeg-static`.
 2. **Install dependencies.** Run `npm install`. `.npmrc` sets `legacy-peer-deps`. Make sure `ffmpeg-static`'s install script downloaded the binary: `node_modules/ffmpeg-static/ffmpeg -version` must work and must list the `scdet`, `select`, `tile`, `sidechaincompress` and `afftdn` filters.
 3. **Install the Playwright browser.** Run `npx playwright install chromium`. The e2e tests need it.
-4. **Create `.env`.** It's git-ignored. Add a placeholder line `DEEPGRAM_API_KEY=` and ask the user to paste the key in themselves. Never print or commit it.
+4. **Create `.env`.** It's git-ignored. Add placeholder lines and ask the user to paste the keys in themselves. Never print or commit them.
+   - `DEEPGRAM_API_KEY=`: voiceover and transcripts.
+   - `FREESOUND_API_KEY=`: stock sounds (`ev sfx-find`).
+   - `UNSPLASH_ACCESS_KEY=`: stock photos for the new-video pipeline. Only the Access Key is needed, not the Secret Key.
 5. **Run checks.** Run `npm run typecheck` and `npm test`. Fix anything that's environment-related. Don't change the editor's behavior.
 6. **Start the editor.** Run `npm run dev` in the background.
    - Confirm http://127.0.0.1:5173 loads.

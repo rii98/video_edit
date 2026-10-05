@@ -127,12 +127,19 @@ Each video is its own project, with its own scenes, intake, media library, versi
 
 ## Starting a new video (intake)
 
-When the user wants to make a new video from their media, use the **`new-video` skill**: study the media, ask the brief questions, build three treatments as motion tests, and hand over in the editor's Intake tab. Their choice arrives as a normal request.
+When the user wants to make a new video, from their own footage or from scratch from an idea, use the **`new-video` skill**. It runs the full pipeline:
+1. Study the material, and break down any reference video.
+2. Brief, then research inspiration, craft and facts.
+3. Three treatments as motion tests in the editor's Intake tab. Their choice arrives as a normal request.
+4. Script, storyboard, real sourced assets, build, then a senior QA pass.
+
+Its reference files (`.claude/skills/new-video/references/`) hold the craft playbook, research sources, asset sourcing and the AI-tell checklist.
 
 Commands:
 - `ev intake` validates the treatments.
 - `ev treatments` renders them all to one sheet.
 - `ev save "<msg>"` commits work that happens outside a request.
+- `ev reference <file|url>` breaks down someone else's video shot by shot (in · mid · out frames, an even strip, pacing numbers). It's for study only and is not imported. URLs need `yt-dlp`.
 
 ## Library (components, themes, techniques)
 

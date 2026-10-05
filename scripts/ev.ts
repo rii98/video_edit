@@ -41,6 +41,7 @@ const HELP = `ev: Easy Video bridge for Claude
   ingest <file|dir>...   Add media to the project and analyze it
   media [id]             Media summary (all assets, or details for one)
   analyze <id> [--redo=step,step]  Re-run analysis steps (e.g. --redo=transcript)
+  reference <file|url>   Shot-by-shot breakdown of someone else's video to learn from (not imported)
   occupancy <id>         Sheet of the top and bottom bands of every second: where can new graphics go?
   remove <id> [--force]  Delete an asset (refuses while scenes use it)
   sfx <kind|all> [--seed=N] [--seconds=S]   Synthesize sound effects into the library
@@ -392,6 +393,27 @@ async function cmdOccupancy(args: string[]) {
   }
   outs.forEach((o) => console.log(rel(o)));
   console.log('Read both: anything already drawn in a band at a given second (titles, cards, captions) means new graphics there will collide.');
+}
+
+async function cmdReference(args: string[]) {
+  const { breakdownReference, fetchReference, isUrl, referenceSlug } = await import('../server/media/reference.ts');
+  const input = args[0];
+  if (!input) fail('usage: reference <video file | URL>');
+  const dir = join(PROJECT_DIR, '.ev', 'reference', referenceSlug(input));
+  let file = resolve(input);
+  try {
+    if (isUrl(input)) file = fetchReference(input, dir);
+    else if (!existsSync(file)) fail(`no such file: ${input}`);
+    const b = await breakdownReference(file, dir);
+    console.log(`${b.width}x${b.height} @ ${b.fps} fps · ${b.duration.toFixed(1)} s`);
+    b.pace.forEach((l) => console.log(l));
+    console.log(`\nSheets (one row per shot: in · mid · out). Read every one, in order:`);
+    b.sheets.forEach((s) => console.log(`  ${rel(s)}`));
+    console.log(`Single frames: ${rel(join(dir, 'frames'))}/s###-{in,mid,out}.png · shot list: ${rel(join(dir, 'shots.json'))}`);
+    console.log(`Its sound (music BPM, VO, SFX hits) needs ears: ingest a copy temporarily if audio matters (ev ingest, then ev remove).`);
+  } catch (err) {
+    fail(err instanceof Error ? err.message : String(err));
+  }
 }
 
 async function cmdRemove(args: string[]) {
@@ -755,6 +777,7 @@ const commands: Record<string, (args: string[]) => unknown> = {
   sfx: cmdSfx,
   remove: cmdRemove,
   occupancy: cmdOccupancy,
+  reference: cmdReference,
   tts: cmdTts,
   'sfx-find': oneLineErrors(cmdSfxFind),
   'sfx-get': oneLineErrors(cmdSfxGet),
