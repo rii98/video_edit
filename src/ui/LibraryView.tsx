@@ -96,7 +96,7 @@ function DemoCard({ name, theme }: { name: string; theme: string | null }) {
 }
 
 export function LibraryView({ media }: { media: MediaAsset[] }) {
-  const sfx = media.filter((a) => a.origin === 'sfx');
+  const sfx = media.filter((a) => a.origin === 'sfx' || a.origin === 'stock');
   const current = projectSlug();
   const [preview, setPreview] = useState<string | null>(current);
   const [busy, setBusy] = useState(false);
@@ -190,7 +190,7 @@ export function LibraryView({ media }: { media: MediaAsset[] }) {
             {sfx.map((a) => (
               <figure key={a.id} className="sfx">
                 <figcaption>
-                  {a.name.replace(/^sfx-|\.wav$/g, '')} <span className="muted small">{a.id}</span>
+                  {a.name.replace(/^(sfx|fs)-|\.wav$/g, '')} <span className="muted small">{a.id}</span>
                 </figcaption>
                 <audio controls preload="none" src={`/${a.file}`} />
               </figure>

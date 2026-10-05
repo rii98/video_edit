@@ -162,6 +162,7 @@ const steps: Record<AnalysisStep, Step> = {
 
   async beats(a) {
     if (a.origin === 'sfx' || a.origin === 'tts') return { state: 'skipped', note: 'generated audio' };
+    if (a.origin === 'stock') return { state: 'skipped', note: 'sound effect' };
     const pcm = await decodePcm(src(a), SAMPLE_RATE, BEAT_MAX_SECONDS);
     const result = analyzeBeats(pcm);
     writeJsonAtomic(out(a, 'beats.json'), result);
@@ -172,7 +173,7 @@ const steps: Record<AnalysisStep, Step> = {
 
   async transcript(a) {
     if (!a.hasAudio) return { state: 'skipped', note: 'no audio track' };
-    if (a.origin === 'sfx') return { state: 'skipped', note: 'sound effect' };
+    if (a.origin === 'sfx' || a.origin === 'stock') return { state: 'skipped', note: 'sound effect' };
     const audio = readJson<{ activeRatio: number }>(out(a, 'audio.json'));
     if (audio && audio.activeRatio < 0.1) return { state: 'skipped', note: 'mostly silent' };
     const beats = readJson<BeatAnalysis>(out(a, 'beats.json'));
@@ -204,6 +205,8 @@ function buildFacts(a: MediaAsset): string[] {
     const s = a.steps[step];
     if (s?.state === 'done' && s.note) facts.push(s.note);
   }
+  if (a.peakAt !== undefined) facts.push(`peak at ${a.peakAt.toFixed(2)}s`);
+  if (a.source) facts.push(`${a.source.provider} #${a.source.id} · ${a.source.license.toUpperCase()} · by ${a.source.author}`);
   return facts;
 }
 

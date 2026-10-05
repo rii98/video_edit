@@ -162,7 +162,14 @@ Commands:
 
 ## Audio
 
+Before adding or changing any sound effect, read `SOUND.md`.
+
 - **Sound effects:** `ev sfx <whoosh|riser|hit|click|pop|shimmer|all> [--seed=N] [--seconds=S]` synthesizes effects into the media library (no sample packs). Use them with `<Sfx id at={frame} />`. Read the `sound-design` card for timing.
+- **Stock sounds:**
+  - `ev sfx-find "<query>" [--min=S --max=S] [--sort=…] [--limit=N]` searches Freesound, CC0 only by default. `--similar=<id>` finds more like one.
+  - `ev sfx-get <id>...` imports: trimmed, -1 dBFS, licence recorded. It prints `at={frame - N}` so the sound's peak lands on `frame`.
+  - `ev sfx-credits` lists credits for any non-CC0 sound in use. Needs `FREESOUND_API_KEY` in `.env`.
+  - New providers implement `SoundSource` in `server/media/sources/` and register in its `index.ts`.
 - **Voiceover:** `ev tts "<text>" [--voice=aura-2-…]` calls Deepgram with the user's key from `.env`.
   - Results are cached per text and voice, and transcribed for word timings.
   - Use `<Voiceover id at />`, and `<Captions assetId={voiceId} offset={-at/fps} />` for captions.

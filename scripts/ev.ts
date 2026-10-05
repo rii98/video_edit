@@ -3,6 +3,7 @@ import { existsSync, readdirSync, readFileSync, statSync, watch } from 'node:fs'
 import { basename, join, relative, resolve } from 'node:path';
 import { formatTime, layoutScenes, totalFrames } from '../src/shared/timeline.ts';
 import type { AnalysisStep, EditRequest, ExportPreset, Timeline } from '../src/shared/types.ts';
+import type { License } from '../server/media/sources/types.ts';
 import { commitAll, ensureRepo, listVersions } from '../server/git.ts';
 import { getAsset as getAssetRecord, listAssets } from '../server/media/library.ts';
 import {
@@ -44,6 +45,10 @@ const HELP = `ev: Easy Video bridge for Claude
   remove <id> [--force]  Delete an asset (refuses while scenes use it)
   sfx <kind|all> [--seed=N] [--seconds=S]   Synthesize sound effects into the library
   tts "<text>" [--voice=aura-2-…]  Generate a voiceover with Deepgram (cached per text+voice)
+  sfx-find "<query>" [--min=S --max=S --license=cc0 --sort=popular --limit=N]
+                         Search stock sounds (Freesound, CC0 by default); --similar=<id> finds more like one
+  sfx-get <id>... [--raw]  Import stock sounds: trimmed, -1 dBFS, peak time and licence recorded
+  sfx-credits            Credits for the stock sounds the scenes use
 
   library                Components, themes and technique cards available to scenes
   demo <Name|all> [--theme=slug]   Render library demos (all → one labelled sheet)
@@ -432,6 +437,95 @@ async function cmdTts(args: string[]) {
   console.log(`${asset.id}${cached ? ' (cached, no API call)' : ''}  ${done?.facts.join(' · ') ?? ''}\n<Voiceover id="${asset.id}" at={…} />`);
 }
 
+const SFX_FIND_USAGE = 'usage: sfx-find "<query>" | --similar=<id>  [--min=S] [--max=S] [--license=cc0[,by,by-nc]] [--sort=popular|relevant|rated|shortest|newest] [--limit=N] [--source=freesound]';
+
+/** Network/API failures as one line instead of a stack trace. */
+const oneLineErrors =
+  (cmd: (args: string[]) => Promise<void>) =>
+  (args: string[]) =>
+    cmd(args).catch((err: unknown) => fail(err instanceof Error ? err.message : String(err)));
+
+async function cmdSfxFind(args: string[]) {
+  const { getSource, LICENSE_LABEL, COMMERCIAL_OK } = await import('../server/media/sources/index.ts');
+  const { cachedStock } = await import('../server/media/stock.ts');
+  const { opts, words } = options(args);
+  const query = words.join(' ').trim();
+  if (!query && !opts.similar) fail(SFX_FIND_USAGE);
+  const source = getSource(opts.source);
+  const licenses = (opts.license ?? 'cc0').split(',').map((l) => l.trim().toLowerCase());
+  const bad = licenses.filter((l) => !source.licenses.includes(l as never));
+  if (bad.length) fail(`unknown licence ${bad.join(', ')} (${source.name} has: ${source.licenses.join(', ')})`);
+  const sorts = ['popular', 'relevant', 'rated', 'shortest', 'newest'] as const;
+  const sort = (opts.sort ?? 'popular') as (typeof sorts)[number];
+  if (!sorts.includes(sort)) fail(SFX_FIND_USAGE);
+  const num = (v: string | undefined, name: string) => {
+    if (v === undefined) return undefined;
+    const n = Number(v);
+    if (!Number.isFinite(n) || n < 0) fail(`--${name} must be a number of seconds`);
+    return n;
+  };
+  const { total, hits } = await source.search({
+    query,
+    similarTo: opts.similar,
+    minSeconds: num(opts.min, 'min'),
+    maxSeconds: num(opts.max, 'max'),
+    licenses: licenses as never,
+    sort,
+    limit: Math.max(1, Math.min(50, Number(opts.limit ?? 10) || 10)),
+  });
+  console.log(`${source.name}: ${total} match${total === 1 ? '' : 'es'}${opts.similar ? ` similar to #${opts.similar}` : ''} (${licenses.map((l) => LICENSE_LABEL[l as never]).join(' or ')})`);
+  for (const h of hits) {
+    const stats = [`${h.duration.toFixed(2)}s`, h.channels ? `${h.channels}ch` : '', h.ratings ? `★${h.rating?.toFixed(1)}(${h.ratings})` : '', h.downloads !== undefined ? `${h.downloads}dl` : '', LICENSE_LABEL[h.license]].filter(Boolean).join('  ');
+    const have = cachedStock(source.name, h.id);
+    const warn = COMMERCIAL_OK.includes(h.license) ? '' : '  ⚠ non-commercial';
+    console.log(`${h.id.padStart(7)}  ${stats}  ${h.title.slice(0, 48)} (by ${h.author})${warn}${have ? `  [in library: ${have.id}]` : ''}`);
+  }
+  if (hits.length) console.log(`\nImport: ev sfx-get <id>...   More like one: ev sfx-find --similar=<id>   Audition: ${source.pageUrl('<id>')}`);
+}
+
+async function cmdSfxGet(args: string[]) {
+  const { importStock } = await import('../server/media/stock.ts');
+  const { analyzeAsset } = await import('../server/media/analyze.ts');
+  const { getSource, COMMERCIAL_OK, NEEDS_CREDIT, LICENSE_LABEL } = await import('../server/media/sources/index.ts');
+  const { opts, words } = options(args);
+  const raw = words.includes('--raw');
+  const ids = words.filter((w) => w !== '--raw');
+  if (!ids.length) fail('usage: sfx-get <id>... [--raw] [--source=freesound]   (--raw: keep the sound as downloaded, no trim/normalize)');
+  const source = getSource(opts.source);
+  const fps = existsSync(join(PROJECT_DIR, 'timeline.json')) ? loadTimeline().fps : 30;
+  let failed = 0;
+  for (const id of ids) {
+    try {
+      const { asset, cached } = await importStock(source.name, id, { raw });
+      const done = (cached ? asset : await analyzeAsset(asset.id)) ?? asset;
+      const lead = Math.round((done.peakAt ?? 0) * fps);
+      console.log(`${done.id}${cached ? ' (already in library)' : ''}  ${done.facts.join(' · ')}`);
+      console.log(`  <Sfx id="${done.id}" at={frame${lead ? ` - ${lead}` : ''}} />   peak lands on \`frame\` (${lead} frame${lead === 1 ? '' : 's'} in at ${fps} fps)`);
+      const license = done.source?.license as License | undefined;
+      if (license && !COMMERCIAL_OK.includes(license)) console.log(`  ⚠ ${LICENSE_LABEL[license]}: not for monetized videos`);
+      if (license && NEEDS_CREDIT.includes(license)) console.log(`  credit required: see ev sfx-credits`);
+    } catch (err) {
+      failed++;
+      console.error(`ev: ${source.name} #${id}: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
+  if (failed) process.exit(1);
+}
+
+/** Credits for stock sounds the scenes use, ready for a video description. */
+async function cmdSfxCredits() {
+  const { assetUsages } = await import('../server/media/library.ts');
+  const { NEEDS_CREDIT, LICENSE_LABEL } = await import('../server/media/sources/index.ts');
+  const used = listAssets().filter((a) => a.source && assetUsages(a.id).length);
+  if (!used.length) return console.log('No stock sounds are used in the scenes.');
+  const credit = used.filter((a) => NEEDS_CREDIT.includes(a.source!.license as never));
+  for (const a of used) {
+    const s = a.source!;
+    console.log(`${NEEDS_CREDIT.includes(s.license as never) ? 'CREDIT' : 'ok    '}  "${s.title}" by ${s.author} (${s.url}), ${LICENSE_LABEL[s.license as never] ?? s.license}   [${a.id}]`);
+  }
+  console.log(credit.length ? `\n${credit.length} sound${credit.length === 1 ? '' : 's'} must be credited (e.g. in the video description).` : '\nAll CC0: no credit needed.');
+}
+
 async function cmdMedia(args: string[]) {
   if (args[0]) return printMediaDetail(args[0]);
   printMediaSummary();
@@ -662,6 +756,9 @@ const commands: Record<string, (args: string[]) => unknown> = {
   remove: cmdRemove,
   occupancy: cmdOccupancy,
   tts: cmdTts,
+  'sfx-find': oneLineErrors(cmdSfxFind),
+  'sfx-get': oneLineErrors(cmdSfxGet),
+  'sfx-credits': cmdSfxCredits,
   library: cmdLibrary,
   demo: cmdDemo,
   theme: cmdTheme,

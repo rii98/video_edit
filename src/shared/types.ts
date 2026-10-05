@@ -135,7 +135,11 @@ export interface MediaAsset {
   /** Short facts shown in the UI and to Claude, e.g. "7 shots", "122 BPM". */
   facts: string[];
   /** How the asset was made; generated audio skips analysis that doesn't apply to it. */
-  origin?: 'upload' | 'sfx' | 'tts';
+  origin?: 'upload' | 'sfx' | 'tts' | 'stock';
+  /** Stock sounds (`ev sfx-get`): where it came from, for credits and to find it again. */
+  source?: { provider: string; id: string; title: string; author: string; license: string; url: string };
+  /** Stock sounds: seconds from the file start to its loudest moment (land it on the visual frame). */
+  peakAt?: number;
 }
 
 /** project/media.json: what scenes need to resolve an asset id to a file. */
