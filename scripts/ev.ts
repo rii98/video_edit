@@ -44,7 +44,7 @@ const HELP = `ev: Easy Video bridge for Claude
   reference <file|url>   Shot-by-shot breakdown of someone else's video to learn from (not imported)
   occupancy <id>         Sheet of the top and bottom bands of every second: where can new graphics go?
   track <id>             Track the person in a video (face, hands, pose, soft mask per frame) for
-                         useTrack / <SubjectMask> in scenes: floating words, glow, type behind, follow-cam
+                         useTrack / FollowCam / CamMask (src/video/track): follow-cam, type behind, glow
   remove <id> [--force]  Delete an asset (refuses while scenes use it)
   sfx <kind|all> [--seed=N] [--seconds=S]   Synthesize sound effects into the library
   tts "<text>" [--voice=Charon] [--style="…"] [--provider=deepgram]
@@ -411,7 +411,7 @@ async function cmdTrack(args: string[]) {
   const n = track.frames.length;
   const pct = (f: (x: (typeof track.frames)[number]) => boolean) => Math.round((100 * track.frames.filter(f).length) / Math.max(1, n));
   console.log(`${n} frames in ${Math.round((Date.now() - t0) / 1000)} s · face ${pct((f) => !!f.face)}% · hands ${pct((f) => f.hands.length > 0)}% · pose ${pct((f) => !!f.pose)}% · mask ${pct((f) => !!f.body)}%`);
-  console.log(`In scenes: const track = useTrack('${a.id}'); <SubjectMask id="${a.id}" … />`);
+  console.log(`In scenes (src/video/track): useTrack('${a.id}'), <FollowCam id="${a.id}">, <CamMask id="${a.id}" mode="cutout" />. Card: subject-tracking-depth`);
 }
 
 async function cmdReference(args: string[]) {

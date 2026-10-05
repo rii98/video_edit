@@ -45,6 +45,7 @@ A **reference video** can come with any mode. If there is one, Phase 2 is mandat
 **Footage-led / hybrid:**
 - `ev media` lists the assets. For each, run `ev media <id>` and **Read its contact sheet**. Note subject, setting, orientation, quality, strongest shots with timestamps, speech vs music (transcript, BPM, energy sections), and on-screen text already there.
 - Label each asset in your notes: **A-roll** (carries the story: speech, the main action) or **B-roll** (illustrates, covers, breathes).
+- **Track people early.** For talking heads or anyone the graphics should interact with, start `ev track <id>` in the background right away (about 1 s per frame). Tracking powers follow-cam reframing (16:9 → 9:16), type behind the subject, rim glow, words from hands and pop-out PiP. See the `subject-tracking-depth` card.
 - **Check for graphics already in the footage.** Many uploads are already edited. Run `ev occupancy <id>` and Read both sheets. New graphics go in the gaps, never on top of existing ones, and never duplicate what's there (the source's own CTA, counter, captions).
 
 **Idea-led:** unpack the idea before researching. Who is it for, what should they feel and remember, what is the single most surprising true thing about the topic, and what visual world does it suggest (archival, diagrammatic, tactile paper, cinematic, UI)?

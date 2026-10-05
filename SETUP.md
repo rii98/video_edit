@@ -10,7 +10,7 @@ For Claude Code: when the user asks to set up this repo (or after a fresh clone)
 
    If something is missing, give the user the exact install command. Don't use Homebrew ffmpeg; the project uses `ffmpeg-static`.
 2. **Install dependencies.** Run `npm install`. `.npmrc` sets `legacy-peer-deps`. Make sure `ffmpeg-static`'s install script downloaded the binary: `node_modules/ffmpeg-static/ffmpeg -version` must work and must list the `scdet`, `select`, `tile`, `sidechaincompress` and `afftdn` filters.
-3. **Install the Playwright browser.** Run `npx playwright install chromium`. The e2e tests need it.
+3. **Install the Playwright browser.** Run `npx playwright install chromium`. The e2e tests need it, and so does `ev track` (subject tracking runs MediaPipe in this Chromium). The MediaPipe models (~37 MB) download to `.cache/mediapipe/` on the first `ev track`, so the first run needs network access.
 4. **Create `.env`.** It's git-ignored. Add placeholder lines and ask the user to paste the keys in themselves. Never print or commit them.
    - `DEEPGRAM_API_KEY=`: voiceover and transcripts.
    - `FREESOUND_API_KEY=`: stock sounds (`ev sfx-find`).

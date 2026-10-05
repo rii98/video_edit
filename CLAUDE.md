@@ -114,6 +114,24 @@ Rules:
 - Trim dead air using the silent gaps.
 - Cut on utterance boundaries from the transcript.
 
+## Subject tracking (people in footage)
+
+`npm run ev -- track <video id>` tracks the person in a clip: face, hands and body pose, plus a soft person mask, for every frame at 30 fps.
+- It runs Google MediaPipe in Playwright's Chromium (CPU, no Python). That takes about 1.1 s per frame (a 25 s clip is about 14 min), so start it **in the background** as soon as talking-head footage arrives.
+- On first use it downloads the models to `.cache/mediapipe/`.
+- Output goes to `analysis/<id>/track/` (`track.json` plus `mask/NNNNN.png`).
+
+In scenes, import from `src/video/track`:
+- `useTrack(id)` gives smoothed points at any source time: `face(t)` (centre, size, mouth, chin, eyes), `hand(t, 'left'|'right')` (palm, fingertips; null when not seen), `pose(t, i)`, `camFace(t)` (heavily smoothed, for the camera).
+- `<FollowCam id from zoom target size? overflow?>` is a virtual camera operator: it reframes 16:9 into 9:16 and keeps the face framed. `zoom` may be a function of the frame (punch-ins, pull-outs). Below 1 it zooms out under cover and sits on the bottom edge, leaving room above for type. Inside it, `useCam().toScreen([x, y])` maps tracked points to canvas pixels.
+- `<CamFootage id from featherTop?>` shows the footage placed by the camera.
+- `<CamMask id from mode="cutout"|"glow"|"fill">` shows the person mask placed by the camera:
+  - **cutout:** her cut out of the frame. Put type between `CamFootage` and this to get text behind her.
+  - **glow:** a rim light.
+  - **fill:** a silhouette or matte.
+
+Read the `subject-tracking-depth` card before using it: room for type behind the head, dimming the room rather than the subject, pop-out PiP, 3D rings with real occlusion, extruded CSS type. The stop-saying-this-v2 project's `scenes/parts.tsx` is a full worked example (Shot, OldChip, BigWord, HandPill, Ring, Counter).
+
 ## Projects
 
 Each video is its own project, with its own scenes, intake, media library, version history and exports. **The active project always lives at `project/`**, so every path in this file means "the active project". Inactive projects wait in `projects/<slug>/`.
@@ -177,6 +195,9 @@ Before adding or changing any sound effect, read `SOUND.md`.
   - `ev sfx-get <id>...` imports: trimmed, -1 dBFS, licence recorded. It prints `at={frame - N}` so the sound's peak lands on `frame`.
   - `ev sfx-credits` lists credits for any non-CC0 sound in use. Needs `FREESOUND_API_KEY` in `.env`.
   - New providers implement `SoundSource` in `server/media/sources/` and register in its `index.ts`.
+- **Music beds from Freesound:** search CC0 music (`ev sfx-find "hip hop" --min=25 --max=180`) and import with `ev sfx-get <id> --raw` so it isn't trimmed. Stock sounds longer than 20 s get beat analysis like any song.
+  - Trending app sounds are copyrighted, and YouTube "no copyright" tracks need credit and can still get claimed. Prefer CC0, and say so to the user.
+- **Custom tones** (when neither `ev sfx` nor Freesound fits, e.g. a soft two-note "nope"): synthesize them with ffmpeg `aevalsrc`, normalize to -1 dBFS, then `ev ingest` the file. Name it `sfx-<what>.wav`.
 - **Voiceover:** `ev tts "<text>" --voice=<Name> [--style="…"]` uses Gemini 3.8 Flash TTS (the user's free `GEMINI_API_KEY`).
   - **No silent fallback.** When Gemini is unavailable (the key's budget is spent, Google refuses, or there's no key), `ev tts` stops. Ask the user to comment out the current `GEMINI_API_KEY` line in `.env` and add a new key, or to wait for the reset. Use Deepgram (`--provider=deepgram`) only if they explicitly ask.
   - `"[[style]] text [[style]] text"` gives several deliveries in one request. The text is spoken verbatim; styles are never spoken. Inline tags like `<short pause>` and `<chuckle>` work.

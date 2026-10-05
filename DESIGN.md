@@ -2,7 +2,7 @@
 
 > **Status (2026-10-03):** phases 1–5 are built and tested, plus audio (synthesized SFX, Deepgram voiceover, ducking, loudness).
 > - Aspect-ratio variants are done by asking Claude to re-lay out the video, not with a button.
-> - Subject cut-out and motion tracking remain future work.
+> - Subject tracking and cut-out landed on 2026-10-05: `ev track` (MediaPipe face, hands, pose and person mask per frame) and `src/video/track.tsx` (follow-cam reframing, type behind the subject, rim glow, hand-anchored graphics). Object tracking (non-people) is still future work.
 >
 > See README.md for usage.
 

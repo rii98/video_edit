@@ -1,6 +1,6 @@
 // Subject tracking for footage: face, hands, body pose and a soft person mask for every frame.
 // Runs Google's MediaPipe models (WASM, CPU) inside Playwright's headless Chromium, so it needs
-// no Python and no GPU. Scenes read the result with `useTrack(id)` / `<SubjectMask>` from the kit:
+// no Python and no GPU. Scenes read the result with useTrack / FollowCam / CamMask (src/video/track.tsx):
 // words that follow a hand, a glow around the speaker, type behind her, a virtual camera that
 // keeps her framed in a vertical crop.
 //

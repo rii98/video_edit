@@ -139,7 +139,7 @@ Rules:
 
 - **Three planes:** background (texture, gradient, environment), midground (subject, footage), foreground (type, graphics, particles, blurred elements).
 - **Parallax** between planes for every camera move (see §6).
-- **Depth masking:** put a title behind the subject (needs a cut-out or a clean plate; on stills, cut the subject out as a separate PNG layer).
+- **Depth masking:** put a title behind the subject (needs a cut-out or a clean plate; on stills, cut the subject out as a separate PNG layer). For people in footage, `ev track` gives a per-frame mask: `<CamMask mode="cutout">` over the type (see `subject-tracking-depth`). Leave the face clear: pull out so the head only overlaps the type's lower edge.
 - **Shadows:** one light direction for the whole video; soft, low-opacity (15–35%), offset matched to the light.
 - **Finish:** film grain 2–5% (also kills banding on gradients), subtle vignette, gentle halation on bright edges for cinematic looks. Blend modes: screen/add for light, multiply for paper and ink.
 - **Atmosphere** (dust, bokeh, light sweeps) only when it suits the world, at low opacity, slow.
