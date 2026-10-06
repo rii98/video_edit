@@ -407,10 +407,11 @@ async function cmdTrack(args: string[]) {
   const a = args[0] ? getAsset(args[0]) : null;
   if (!a || a.kind !== 'video') fail('usage: track <video asset id>');
   const t0 = Date.now();
-  const track = await trackAsset(a.id, a.file, a.duration ?? 0);
+  const track = await trackAsset(a.id, a.file, a.duration ?? 0, { width: a.width, height: a.height });
   const n = track.frames.length;
   const pct = (f: (x: (typeof track.frames)[number]) => boolean) => Math.round((100 * track.frames.filter(f).length) / Math.max(1, n));
-  console.log(`${n} frames in ${Math.round((Date.now() - t0) / 1000)} s · face ${pct((f) => !!f.face)}% · hands ${pct((f) => f.hands.length > 0)}% · pose ${pct((f) => !!f.pose)}% · mask ${pct((f) => !!f.body)}%`);
+  console.log(`${n} frames (${track.width}×${track.height}) in ${Math.round((Date.now() - t0) / 1000)} s · face ${pct((f) => !!f.face)}% · hands ${pct((f) => f.hands.length > 0)}% · pose ${pct((f) => !!f.pose)}% · mask ${pct((f) => !!f.body)}%`);
+  if (pct((f) => !!f.face) < 20) console.log('⚠ Faces were found in under 20% of frames: check the footage (very wide shots, faces turned away) before relying on FollowCam.');
   console.log(`In scenes (src/video/track): useTrack('${a.id}'), <FollowCam id="${a.id}">, <CamMask id="${a.id}" mode="cutout" />. Card: subject-tracking-depth`);
 }
 

@@ -119,7 +119,8 @@ Rules:
 `npm run ev -- track <video id>` tracks the person in a clip: face, hands and body pose, plus a soft person mask, for every frame at 30 fps.
 - It runs Google MediaPipe in Playwright's Chromium (CPU, no Python). That takes about 1.1 s per frame (a 25 s clip is about 14 min), so start it **in the background** as soon as talking-head footage arrives.
 - On first use it downloads the models to `.cache/mediapipe/`.
-- Output goes to `analysis/<id>/track/` (`track.json` plus `mask/NNNNN.png`).
+- Output goes to `analysis/<id>/track/` (`track.json` plus `mask/NNNNN.png`). Portrait clips are tracked upright, and wide shots fall back to a pose-derived face.
+- Pin graphics to objects by measuring them (colour-track, audio onsets at 1 ms). Grade the subject with a tracked soft power window, not the matte. See the `lights-out-hook`, `subject-room-separation` and `cartoon-keyword-type` cards.
 
 In scenes, import from `src/video/track`:
 - `useTrack(id)` gives smoothed points at any source time: `face(t)` (centre, size, mouth, chin, eyes), `hand(t, 'left'|'right')` (palm, fingertips; null when not seen), `pose(t, i)`, `camFace(t)` (heavily smoothed, for the camera).

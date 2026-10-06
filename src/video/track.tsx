@@ -66,7 +66,31 @@ function gaussian(values: (number | null)[], sigma: number): number[] {
   return out;
 }
 
+/**
+ * The face detector is short-range: in wide shots (a small face) it finds nothing, while the pose
+ * model still sees the head. Estimate the face from pose landmarks then (0 nose, 2/5 eyes,
+ * 7/8 ears, 9/10 mouth), sized from the ear-to-ear distance.
+ */
+function faceFromPose(pose: RawFrame['pose']): RawFrame['face'] {
+  if (!pose) return null;
+  const v = (i: number) => (pose[i]![2] ?? 0) > 0.5;
+  if (!v(0) || !v(2) || !v(5)) return null;
+  const P = (i: number): Pt => [pose[i]![0], pose[i]![1]];
+  const nose = P(0);
+  const eyeL = P(2);
+  const eyeR = P(5);
+  const earSpan = v(7) && v(8) ? Math.abs(pose[7]![0] - pose[8]![0]) : Math.abs(eyeL[0] - eyeR[0]) * 2.4;
+  const w = earSpan * 1.05;
+  const eyeY = (eyeL[1] + eyeR[1]) / 2;
+  const mouth: Pt = v(9) && v(10) ? [(pose[9]![0] + pose[10]![0]) / 2, (pose[9]![1] + pose[10]![1]) / 2] : [nose[0], nose[1] + (nose[1] - eyeY)];
+  const unit = mouth[1] - eyeY;
+  const top = eyeY - unit * 2.1;
+  const chin: Pt = [mouth[0], mouth[1] + unit * 0.9];
+  return { box: [nose[0] - w / 2, top, nose[0] + w / 2, chin[1]], nose, eyeL, eyeR, mouth, chin, forehead: [nose[0], top + unit * 0.4] };
+}
+
 function build(id: string, raw: RawTrack): Tracker {
+  raw = { ...raw, frames: raw.frames.map((f) => (f.face || !f.pose ? f : { ...f, face: faceFromPose(f.pose) })) };
   const n = raw.frames.length;
   const idx = (t: number) => Math.max(0, Math.min(n - 1, t * raw.fps));
   const series = (get: (f: RawFrame) => number | null | undefined, sigma: number) => gaussian(raw.frames.map((f) => get(f) ?? null), sigma);

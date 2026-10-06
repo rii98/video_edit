@@ -18,6 +18,7 @@ import { loadFont as archivoBlack } from '@remotion/google-fonts/ArchivoBlack';
 import { loadFont as archivo } from '@remotion/google-fonts/Archivo';
 import { loadFont as permanentMarker } from '@remotion/google-fonts/PermanentMarker';
 import { loadFont as interTight } from '@remotion/google-fonts/InterTight';
+import { loadFont as luckiestGuy } from '@remotion/google-fonts/LuckiestGuy';
 
 type Loader = () => { fontFamily: string };
 // Only the weights and subset we use: each extra weight is another network request at render.
@@ -43,6 +44,7 @@ const loaders: Record<string, { load: Loader; fallback: string }> = {
   Archivo: { load: () => archivo('normal', opts(['400', '700'])), fallback: 'Helvetica, Arial, sans-serif' },
   'Permanent Marker': { load: () => permanentMarker('normal', opts(['400'])), fallback: 'cursive' },
   'Inter Tight': { load: () => interTight('normal', opts(['400', '600', '800'])), fallback: 'Helvetica, Arial, sans-serif' },
+  'Luckiest Guy': { load: () => luckiestGuy('normal', opts(['400'])), fallback: 'Impact, sans-serif' },
 };
 
 export const FONT_NAMES = Object.keys(loaders);

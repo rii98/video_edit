@@ -1,0 +1,39 @@
+{
+  "name": "Ember Supper",
+  "description": "Lights-out cinematic hook into a warm creator edit: espresso black, cream type, one flame-amber accent and coral for 'eat'. The Upgrade type family (Bricolage Grotesque 800 + JetBrains Mono tags) so it reads as the same series. Sassy talking-head lessons, food and everyday English.",
+  "colors": {
+    "bg": "#120D0B",
+    "surface": "#1E1714",
+    "text": "#FFF4E6",
+    "muted": "#A8998A",
+    "accent": "#FFB23E",
+    "accent2": "#F2735B"
+  },
+  "fonts": {
+    "display": "Bricolage Grotesque",
+    "body": "Inter Tight",
+    "mono": "JetBrains Mono"
+  },
+  "type": {
+    "displayWeight": 800,
+    "displayTracking": "-0.045em",
+    "uppercaseDisplay": false
+  },
+  "easing": {
+    "standard": [
+      0.16,
+      1,
+      0.3,
+      1
+    ],
+    "emphasized": [
+      0.87,
+      0,
+      0.13,
+      1
+    ]
+  },
+  "tempo": 0.95,
+  "stagger": 2,
+  "radius": 18
+}

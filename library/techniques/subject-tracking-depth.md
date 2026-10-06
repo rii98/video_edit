@@ -10,6 +10,10 @@ themes: editorial-pop, red-pen, velvet-cinema
 - `npm run ev -- track <video id>` runs MediaPipe (face landmarker, hand landmarker, pose full, selfie multiclass segmenter) in Playwright's Chromium on CPU. No Python or GPU needed. It takes about 1.1 s per frame at 30 fps (a 25 s clip takes about 14 min), so run it once, in the background, while you research.
 - Output: `analysis/<id>/track/track.json` (0..1 source coordinates) and `mask/NNNNN.png` (1280×720, white with alpha = person).
 - Masks: the face-centred square crop gives sharp edges, a full-frame pass catches arms outside it, and the two are feathered together. Never use the crop alone; it leaves a hard vertical seam on raised arms.
+- **Portrait sources** (phone 9:16) are tracked upright: frames and masks keep the source aspect (long side 1920 / 1280), and the sharp segmentation square slides vertically to follow the face. Before 2026-10-06 everything was squashed to 16:9 and a vertical clip got 0% faces; `ev track` now warns below 20%.
+- **Wide shots:** the face detector is short-range, so a small face is missed. `useTrack` then estimates the face from pose landmarks (nose, eyes, ears, mouth), so the camera still aims at her.
+- **Mask seam:** the crop and the whole-frame mask are crossfaded (`wide × (1 − g) + crop × g`, canvas `lighter`). The old source-over blend dipped about 25% alpha in a stripe across the hair.
+- **Don't grade through the matte:** its low-resolution false positives (bedding) show as blocks once she's graded apart from the room. Use a tracked soft power window for grading and the cutout only where type sits behind the head (see `subject-room-separation`).
 - Smoothing lives in `useTrack`. Anchors use a gaussian with σ ≈ 1.5 frames (they stick to the hand and don't jitter). The camera uses σ ≈ 14 frames, which feels like an operator rather than a gimbal.
 
 ## Rules

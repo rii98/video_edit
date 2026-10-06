@@ -14,6 +14,8 @@ import cinemaInk from './cinema-ink.json';
 import editorialPop from './editorial-pop.json';
 import redPen from './red-pen.json';
 import velvetCinema from './velvet-cinema.json';
+import emberSupper from './ember-supper.json';
+import menuCard from './menu-card.json';
 
 export const themes: Record<string, ThemeTokens> = {
   'warm-editorial': warmEditorial,
@@ -29,4 +31,6 @@ export const themes: Record<string, ThemeTokens> = {
   'editorial-pop': editorialPop,
   'red-pen': redPen,
   'velvet-cinema': velvetCinema,
+  'ember-supper': emberSupper,
+  'menu-card': menuCard,
 };

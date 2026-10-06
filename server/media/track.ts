@@ -6,7 +6,8 @@
 //
 // Output (public via staticFile, like every analysis file):
 //   analysis/<id>/track/track.json   per-frame landmarks, normalised 0..1 in the source frame
-//   analysis/<id>/track/mask/NNNNN.png  white with alpha = person confidence, 1280×720
+//   analysis/<id>/track/mask/NNNNN.png  white with alpha = person confidence, long side 1280
+// Frames keep the source's aspect (long side 1920), so portrait phone footage is tracked upright.
 import { createServer } from 'node:http';
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -16,10 +17,18 @@ import { ffmpeg } from './ffmpeg.ts';
 import { analysisDir, mediaPath } from './library.ts';
 
 export const TRACK_FPS = 30;
-const FRAME_W = 1920;
-const FRAME_H = 1080;
-const MASK_W = 1280;
-const MASK_H = 720;
+const FRAME_LONG = 1920;
+const MASK_LONG = 1280;
+
+/** Tracking frame and mask sizes for a source of `w`×`h` (even numbers, long side fixed). */
+function sizesFor(w: number, h: number) {
+  const even = (v: number) => Math.max(2, Math.round(v / 2) * 2);
+  const landscape = w >= h;
+  const ratio = landscape ? h / w : w / h;
+  const frame = landscape ? [FRAME_LONG, even(FRAME_LONG * ratio)] : [even(FRAME_LONG * ratio), FRAME_LONG];
+  const mask = landscape ? [MASK_LONG, even(MASK_LONG * ratio)] : [even(MASK_LONG * ratio), MASK_LONG];
+  return { W: frame[0]!, H: frame[1]!, MW: mask[0]!, MH: mask[1]! };
+}
 const MODELS_DIR = join(ROOT, '.cache', 'mediapipe');
 const MODELS: Record<string, string> = {
   'face_landmarker.task': 'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/latest/face_landmarker.task',
@@ -62,9 +71,12 @@ async function ensureModels(): Promise<void> {
   }
 }
 
-const PAGE = /* html */ `<!doctype html><meta charset="utf-8"><body><script type="module">
+const page = ({ W, H, MW, MH }: ReturnType<typeof sizesFor>) => /* html */ `<!doctype html><meta charset="utf-8"><body><script type="module">
 import { FilesetResolver, FaceLandmarker, HandLandmarker, PoseLandmarker, ImageSegmenter } from '/node_modules/@mediapipe/tasks-vision/vision_bundle.mjs';
-const W = ${FRAME_W}, H = ${FRAME_H}, MW = ${MASK_W}, MH = ${MASK_H};
+const W = ${W}, H = ${H}, MW = ${MW}, MH = ${MH};
+// S: side of the sharp square crop (slides along the long axis to follow the face).
+// L: side of the letterboxed square for the whole-frame pass.
+const S = Math.min(W, H), L = Math.max(W, H), PORTRAIT = H > W;
 const r = (v) => Math.round(v * 10000) / 10000;
 const pt = (l) => [r(l.x), r(l.y)];
 window.runTrack = async (count) => {
@@ -76,18 +88,18 @@ window.runTrack = async (count) => {
   const seg = await ImageSegmenter.createFromOptions(fileset, { ...opts('selfie_multiclass_256x256.tflite'), outputConfidenceMasks: true, outputCategoryMask: false });
   const segWide = await ImageSegmenter.createFromOptions(fileset, { ...opts('selfie_multiclass_256x256.tflite'), outputConfidenceMasks: true, outputCategoryMask: false });
   // The segmenter sees a square crop around the person (more pixels on her edges than the full frame).
-  const crop = document.createElement('canvas'); crop.width = crop.height = H;
+  const crop = document.createElement('canvas'); crop.width = crop.height = S;
   const cctx = crop.getContext('2d');
-  const sq = document.createElement('canvas'); sq.width = sq.height = H;
+  const sq = document.createElement('canvas'); sq.width = sq.height = S;
   const sqctx = sq.getContext('2d');
-  const wide = document.createElement('canvas'); wide.width = wide.height = W;
+  const wide = document.createElement('canvas'); wide.width = wide.height = L;
   const wctx = wide.getContext('2d');
   const feather = document.createElement('canvas'); feather.width = MW; feather.height = MH;
   const fctx = feather.getContext('2d');
   const out = document.createElement('canvas'); out.width = MW; out.height = MH;
   const octx = out.getContext('2d');
   let prev = null; // previous mask for temporal smoothing
-  let cx = 0.5;
+  let cx = 0.5, cy = 0.4;
   const frames = [];
   for (let i = 0; i < count; i++) {
     const img = new Image();
@@ -105,6 +117,7 @@ window.runTrack = async (count) => {
       const mid = (a, b) => [r((L[a].x + L[b].x) / 2), r((L[a].y + L[b].y) / 2)];
       frame.face = { box: [r(x0), r(y0), r(x1), r(y1)], nose: pt(L[1]), eyeL: mid(33, 133), eyeR: mid(362, 263), mouth: mid(13, 14), chin: pt(L[152]), forehead: pt(L[10]) };
       cx = cx * 0.7 + ((x0 + x1) / 2) * 0.3;
+      cy = cy * 0.7 + ((y0 + y1) / 2) * 0.3;
     }
     (h.landmarks || []).forEach((L, k) => {
       const hd = h.handedness?.[k]?.[0];
@@ -112,12 +125,14 @@ window.runTrack = async (count) => {
       frame.hands.push({ side: hd?.categoryName || 'Left', score: r(hd?.score ?? 0), pts: L.map(pt), palm: [r(palm[0]), r(palm[1])] });
     });
     if (p.landmarks?.[0]) frame.pose = p.landmarks[0].map((l) => [r(l.x), r(l.y), r(l.visibility ?? 0)]);
-    // Segment a full-height square centred on the face.
-    const sx = Math.max(0, Math.min(W - H, Math.round(cx * W - H / 2)));
-    cctx.drawImage(img, sx, 0, H, H, 0, 0, H, H);
+    // Segment a short-side square centred on the face (sliding along the long axis).
+    const sx = PORTRAIT ? 0 : Math.max(0, Math.min(W - S, Math.round(cx * W - S / 2)));
+    const sy = PORTRAIT ? Math.max(0, Math.min(H - S, Math.round(cy * H - S / 2))) : 0;
+    cctx.drawImage(img, sx, sy, S, S, 0, 0, S, S);
     // A second pass on the whole frame (letterboxed square) covers arms that reach outside the crop.
-    wctx.fillStyle = '#000'; wctx.fillRect(0, 0, W, W);
-    wctx.drawImage(img, 0, (W - H) / 2, W, H);
+    const ox = (L - W) / 2, oy = (L - H) / 2;
+    wctx.fillStyle = '#000'; wctx.fillRect(0, 0, L, L);
+    wctx.drawImage(img, ox, oy, W, H);
     const ws = segWide.segmentForVideo(wide, ts);
     const wbg = ws.confidenceMasks[0].getAsFloat32Array();
     const wn = Math.round(Math.sqrt(wbg.length));
@@ -128,8 +143,8 @@ window.runTrack = async (count) => {
     // Full-frame mask at the output size; the crop's sharper result is drawn over it.
     const fid = new ImageData(MW, MH);
     for (let y = 0; y < MH; y++) for (let x = 0; x < MW; x++) {
-      const u = Math.min(wn - 1, Math.floor((x / MW) * wn));
-      const v = Math.min(wn - 1, Math.floor((((y / MH) * H + (W - H) / 2) / W) * wn));
+      const u = Math.min(wn - 1, Math.floor((((x / MW) * W + ox) / L) * wn));
+      const v = Math.min(wn - 1, Math.floor((((y / MH) * H + oy) / L) * wn));
       const a = Math.max(0, Math.min(1, (1 - wbg[v * wn + u] - 0.35) / 0.3));
       const o = (y * MW + x) * 4;
       fid.data[o] = fid.data[o + 1] = fid.data[o + 2] = 255; fid.data[o + 3] = Math.round(a * 255);
@@ -151,23 +166,26 @@ window.runTrack = async (count) => {
     sq.width = n; sq.height = n;
     sqctx.putImageData(id, 0, 0);
     octx.putImageData(fid, 0, 0);
-    // Blend the crop in with feathered side edges so there's no seam.
+    // Blend the crop in with feathered edges along the sliding axis so there's no seam.
     fctx.clearRect(0, 0, MW, MH);
     fctx.globalCompositeOperation = 'source-over';
     fctx.imageSmoothingQuality = 'high';
-    const dx = (sx / W) * MW, dw = (H / W) * MW;
-    fctx.drawImage(sq, 0, 0, n, n, dx, 0, dw, MH);
-    const g = fctx.createLinearGradient(dx, 0, dx + dw, 0);
-    const fe = sx > 0 ? 0.08 : 0, fe2 = sx < W - H ? 0.92 : 1;
-    g.addColorStop(0, 'rgba(0,0,0,' + (sx > 0 ? 0 : 1) + ')'); g.addColorStop(fe, '#000'); g.addColorStop(fe2, '#000'); g.addColorStop(1, 'rgba(0,0,0,' + (sx < W - H ? 0 : 1) + ')');
+    const dx = (sx / W) * MW, dy = (sy / H) * MH, dw = (S / W) * MW, dh = (S / H) * MH;
+    fctx.drawImage(sq, 0, 0, n, n, dx, dy, dw, dh);
+    const pos = PORTRAIT ? sy : sx, room = PORTRAIT ? H - S : W - S;
+    const g = PORTRAIT ? fctx.createLinearGradient(0, dy, 0, dy + dh) : fctx.createLinearGradient(dx, 0, dx + dw, 0);
+    const fe = pos > 0 ? 0.08 : 0, fe2 = pos < room ? 0.92 : 1;
+    g.addColorStop(0, 'rgba(0,0,0,' + (pos > 0 ? 0 : 1) + ')'); g.addColorStop(fe, '#000'); g.addColorStop(fe2, '#000'); g.addColorStop(1, 'rgba(0,0,0,' + (pos < room ? 0 : 1) + ')');
     fctx.globalCompositeOperation = 'destination-in';
-    fctx.fillStyle = g; fctx.fillRect(dx, 0, dw, MH);
-    // Inside the crop, the crop wins: erase the wide mask there, weighted by the feather.
+    fctx.fillStyle = g; fctx.fillRect(dx, dy, dw, dh);
+    // Inside the crop, crossfade to it: wide × (1 − g) + crop × g. (Erasing the wide mask by g and then
+    // drawing the crop with source-over would give g + (1 − g)², a ~25% alpha dip along the seam.)
     octx.globalCompositeOperation = 'destination-out';
-    octx.fillStyle = g; octx.fillRect(dx, 0, dw, MH);
-    octx.globalCompositeOperation = 'source-over';
+    octx.fillStyle = g; octx.fillRect(dx, dy, dw, dh);
+    octx.globalCompositeOperation = 'lighter';
     octx.drawImage(feather, 0, 0);
-    if (bx1 > bx0) frame.body = [r((sx + (bx0 / n) * H) / W), r(by0 / n), r((sx + (bx1 / n) * H) / W), r(by1 / n)];
+    octx.globalCompositeOperation = 'source-over';
+    if (bx1 > bx0) frame.body = [r((sx + (bx0 / n) * S) / W), r((sy + (by0 / n) * S) / H), r((sx + (bx1 / n) * S) / W), r((sy + (by1 / n) * S) / H)];
     const png = out.toDataURL('image/png');
     await fetch('/save?i=' + i, { method: 'POST', body: png });
     frames.push(frame);
@@ -181,7 +199,8 @@ window.ready = true;
 const TYPES: Record<string, string> = { '.js': 'text/javascript', '.mjs': 'text/javascript', '.wasm': 'application/wasm', '.jpg': 'image/jpeg', '.task': 'application/octet-stream', '.tflite': 'application/octet-stream', '.html': 'text/html' };
 
 /** Track the person in a video asset. Writes track.json and the mask sequence; returns the track. */
-export async function trackAsset(id: string, file: string, duration: number): Promise<Track> {
+export async function trackAsset(id: string, file: string, duration: number, source: { width?: number; height?: number } = {}): Promise<Track> {
+  const sizes = sizesFor(source.width ?? 1920, source.height ?? 1080);
   await ensureModels();
   const outDir = join(analysisDir(id), 'track');
   const maskDir = join(outDir, 'mask');
@@ -192,7 +211,7 @@ export async function trackAsset(id: string, file: string, duration: number): Pr
   mkdirSync(framesDir, { recursive: true });
 
   console.log(`  extracting frames at ${TRACK_FPS} fps…`);
-  await ffmpeg(['-y', '-i', mediaPath(file), '-t', String(duration), '-vf', `fps=${TRACK_FPS},scale=${FRAME_W}:${FRAME_H}`, '-q:v', '3', join(framesDir, '%05d.jpg')]);
+  await ffmpeg(['-y', '-i', mediaPath(file), '-t', String(duration), '-vf', `fps=${TRACK_FPS},scale=${sizes.W}:${sizes.H}`, '-q:v', '3', join(framesDir, '%05d.jpg')]);
   const count = readdirSync(framesDir).filter((f) => f.endsWith('.jpg')).length;
 
   const server = createServer((req, res) => {
@@ -215,7 +234,7 @@ export async function trackAsset(id: string, file: string, duration: number): Pr
     else if (url.pathname.startsWith('/frames/')) path = join(framesDir, normalize(url.pathname.slice(8)));
     if (url.pathname === '/') {
       res.setHeader('content-type', 'text/html');
-      res.end(PAGE);
+      res.end(page(sizes));
     } else if (path && existsSync(path)) {
       res.setHeader('content-type', TYPES[extname(path)] ?? 'application/octet-stream');
       res.end(readFileSync(path));
@@ -240,7 +259,7 @@ export async function trackAsset(id: string, file: string, duration: number): Pr
     await page.waitForFunction('window.ready === true');
     const frames = (await page.evaluate(`window.runTrack(${count})`)) as TrackFrame[];
     process.stdout.write('\n');
-    const track: Track = { fps: TRACK_FPS, width: FRAME_W, height: FRAME_H, frames, mask: `analysis/${id}/track/mask` };
+    const track: Track = { fps: TRACK_FPS, width: sizes.W, height: sizes.H, frames, mask: `analysis/${id}/track/mask` };
     writeFileSync(join(outDir, 'track.json'), JSON.stringify(track));
     return track;
   } finally {

@@ -1,0 +1,29 @@
+{
+  "name": "Menu Card",
+  "description": "A fine-dining menu as a graphic system: cream card stock, espresso ink, italic Instrument Serif courses over small tracked grotesk labels, a tomato accent and sage ticks, hairline rules. Food, lifestyle and language lessons that should feel curated and screenshot-worthy.",
+  "colors": {
+    "bg": "#F4ECDD",
+    "surface": "#FFFAF1",
+    "text": "#231A15",
+    "muted": "#8A7C6E",
+    "accent": "#D2452F",
+    "accent2": "#5F7F5A"
+  },
+  "fonts": {
+    "display": "Instrument Serif",
+    "body": "Bricolage Grotesque",
+    "mono": "JetBrains Mono"
+  },
+  "type": {
+    "displayWeight": 400,
+    "displayTracking": "-0.02em",
+    "uppercaseDisplay": false
+  },
+  "easing": {
+    "standard": [0.22, 1, 0.36, 1],
+    "emphasized": [0.83, 0, 0.17, 1]
+  },
+  "tempo": 1.05,
+  "stagger": 3,
+  "radius": 8
+}
