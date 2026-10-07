@@ -105,6 +105,20 @@ export const catalog: CatalogEntry[] = [
     techniques: ['dark-saas-aurora'],
   },
   {
+    name: 'Look',
+    summary: 'Colour grade for footage and pictures inside it (text untouched): exposure, white balance, contrast, shadows/highlights, saturation, then a creative LUT look (film, teal-orange, warm, moody, clean, mono, theme, or any .cube) at a strength. GPU, frame-exact.',
+    usage: '<Look exposure={0.3} temperature={-0.15} contrast={1.08} look="film" amount={0.7}><Footage id="talk-…" /></Look>',
+    tags: ['color', 'grade', 'footage', 'lut'],
+    techniques: ['color-grading', 'subject-room-separation'],
+  },
+  {
+    name: 'Studio3D',
+    summary: 'Three.js scene with studio finish: environment lighting from light cards or an HDRI, soft contact shadows, ambient occlusion, bloom, depth of field, AgX filmic tone mapping. Physical material presets (MATERIALS.glass/chrome/ceramic…). look="basic" = plain default setup for before/afters.',
+    usage: '<Studio3D id="hero" width={1080} height={1080} look="studio" focus={6}><mesh><sphereGeometry /><meshPhysicalMaterial {...MATERIALS.glass} /></mesh></Studio3D>',
+    tags: ['3d', 'product', 'hero'],
+    techniques: ['studio-3d', '3d-planets-and-depth'],
+  },
+  {
     name: 'Sfx',
     summary: 'A synthesized sound effect at a frame: whoosh, riser, hit, click, pop, shimmer (create with `ev sfx`).',
     usage: '<Sfx id="sfx-whoosh-…" at={42} volume={0.7} />',

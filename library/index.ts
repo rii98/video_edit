@@ -7,3 +7,5 @@ export { BeatPulse, AuroraBackground, useBeatEnvelope } from './components/rhyth
 export { Sfx, Voiceover, DuckedMusic, useDuckVolume } from './components/audio';
 export { speechIntervals, duckGain } from './components/ducking';
 export { useAnalysis, useTranscript, useBeats, type Word, type Beats } from './components/data';
+export { Look, blendGrade, type Grade } from '../src/video/grade';
+export { Studio3D, MATERIALS, type StudioLook } from './components/studio3d';

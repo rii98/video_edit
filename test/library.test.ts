@@ -17,8 +17,8 @@ describe('component catalog', () => {
     const exported = [...read('library/index.ts').matchAll(/export \{([^}]+)\}/g)]
       .flatMap((m) => m[1]!.split(','))
       .map((s) => s.trim())
-      .filter((s) => /^[A-Z]/.test(s) && !s.startsWith('type '));
-    // (speechIntervals/duckGain are lower-case helpers, so they're not components.)
+      .filter((s) => /^[A-Z]/.test(s) && !s.startsWith('type ') && !/^[A-Z0-9_]+$/.test(s));
+    // (speechIntervals/duckGain are lower-case helpers and MATERIALS is a constant, so they're not components.)
     assert.deepEqual([...new Set(exported)].sort(), names);
   });
 

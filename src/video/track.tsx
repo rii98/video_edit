@@ -7,11 +7,12 @@
 //   <CamMask>         the person mask, placed by the camera: a glow around her, or a cutout of her
 //                     (put type between <CamFootage> and a cutout for "text behind the subject")
 // All coordinates in the track are 0..1 of the source frame.
-import { createContext, useContext, useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useId, useMemo, useState, type CSSProperties, type ReactNode } from "react";
 import { cancelRender, continueRender, delayRender, Img, staticFile, useCurrentFrame, useVideoConfig } from 'remotion';
 import mediaJson from '../../project/media.json';
 import type { MediaManifest } from '../shared/types.ts';
 import { Footage } from './kit';
+import { Look, type Grade } from './grade';
 
 const media = mediaJson as MediaManifest;
 
@@ -353,4 +354,94 @@ export function CamMask({ id, from = 0, mode, color = '#fff', blur = 24, spread 
 export function MaskPreload() {
   const { t, track } = useCam();
   return <Img src={track.maskSrc(t)} style={{ display: 'none' }} />;
+}
+
+// ---- Subject finishing (pairs with <Look> from src/video/grade) -------------------------------
+
+/**
+ * Grades the speaker apart from the room the way a colourist does: a tracked, heavily feathered
+ * oval (a power window) around head and shoulders carries `grade`, so there's never a hard matte
+ * edge. Put it right after <CamFootage> (graded as the room, e.g. inside <Look exposure={-0.8}>).
+ * Sized from the face: half-width `width` face widths, half-height `height` face heights,
+ * centred `drop` face heights below the face centre. See the subject-room-separation card.
+ */
+export function SubjectWindow({ id, from = 0, grade, width = 1.75, height = 3, drop = 1.15, core = 0.38 }: {
+  id: string;
+  from?: number;
+  grade: Grade;
+  width?: number;
+  height?: number;
+  drop?: number;
+  /** Fraction of the oval at full strength before the feather starts. */
+  core?: number;
+}) {
+  const { toScreen, track, t, box } = useCam();
+  const f = track.camFace(t);
+  const face = track.face(t);
+  const [cx, cy] = toScreen([f.cx, f.cy + f.h * drop]);
+  const rx = Math.max(face.w * box.w * width, box.w * 0.18);
+  const ry = Math.max(f.h * box.h * height, rx * 1.2);
+  const c = Math.round(core * 100);
+  const mask = `radial-gradient(ellipse ${rx}px ${ry}px at ${cx}px ${cy}px, #000 0%, #000 ${c}%, rgba(0,0,0,0.62) ${c + (100 - c) * 0.45}%, rgba(0,0,0,0.2) ${c + (100 - c) * 0.78}%, transparent 100%)`;
+  return (
+    <div style={{ position: 'absolute', inset: 0, WebkitMaskImage: mask, maskImage: mask }}>
+      <Look {...grade}>
+        <CamFootage id={id} from={from} muted />
+      </Look>
+    </div>
+  );
+}
+
+/**
+ * Portrait-mode background blur for footage: the room is blurred like a wide-open lens and the
+ * speaker (her tracked soft matte) stays sharp on top. Use instead of <CamFootage>.
+ * `blur` in px at canvas scale (10 = subtle f/2.8, 20 = strong f/1.4).
+ *
+ * The room is blurred with her cut OUT and the result renormalised (an SVG blur on a layer with a
+ * hole, read back unpremultiplied = average of room pixels only), so her colours never smear
+ * into a halo around her the way blurring the whole frame does.
+ */
+export function PortraitBlur({ id, from = 0, blur = 14, muted = true }: { id: string; from?: number; blur?: number; muted?: boolean }) {
+  const { box, t, track } = useCam();
+  const src = track.maskSrc(t);
+  useImageReady(src);
+  const fid = 'pb' + useId().replace(/[^a-zA-Z0-9]/g, '');
+  const roomOnly: CSSProperties = {
+    position: 'absolute',
+    inset: 0,
+    WebkitMaskImage: `url(${src}), linear-gradient(#000, #000)`,
+    maskImage: `url(${src}), linear-gradient(#000, #000)`,
+    WebkitMaskSize: `${box.w}px ${box.h}px, 100% 100%`,
+    maskSize: `${box.w}px ${box.h}px, 100% 100%`,
+    WebkitMaskPosition: `${box.x}px ${box.y}px, 0 0`,
+    maskPosition: `${box.x}px ${box.y}px, 0 0`,
+    WebkitMaskRepeat: 'no-repeat',
+    maskRepeat: 'no-repeat',
+    WebkitMaskComposite: 'xor',
+    maskComposite: 'exclude',
+  };
+  // alpha → 1 wherever any room pixel contributed (≥ 4%): the colour there is already the room average
+  const alphaTable = ['0', ...Array(24).fill('1')].join(' ');
+  return (
+    <>
+      <svg width={0} height={0} style={{ position: 'absolute' }}>
+        <filter id={fid} x="-10%" y="-10%" width="120%" height="120%" colorInterpolationFilters="sRGB">
+          <feGaussianBlur stdDeviation={blur} edgeMode="duplicate" />
+          <feComponentTransfer>
+            <feFuncA type="discrete" tableValues={alphaTable} />
+          </feComponentTransfer>
+        </filter>
+      </svg>
+      {/* fallback deep inside her silhouette, where no room pixel is in reach (hidden by the cutout) */}
+      <div style={{ position: 'absolute', inset: 0, filter: `blur(${blur * 2.5}px)`, transform: 'scale(1.06)' }}>
+        <CamFootage id={id} from={from} muted />
+      </div>
+      <div style={{ position: 'absolute', inset: 0, filter: `url(#${fid})` }}>
+        <div style={roomOnly}>
+          <CamFootage id={id} from={from} muted={muted} />
+        </div>
+      </div>
+      <CamMask id={id} from={from} mode="cutout" />
+    </>
+  );
 }

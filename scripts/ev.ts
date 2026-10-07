@@ -46,6 +46,19 @@ const HELP = `ev: Easy Video bridge for Claude
   track <id>             Track the person in a video (face, hands, pose, soft mask per frame) for
                          useTrack / FollowCam / CamMask (src/video/track): follow-cam, type behind, glow
   remove <id> [--force]  Delete an asset (refuses while scenes use it)
+  grade-check <id> [--at=s,s]  Measure footage like a colourist (exposure, white balance, contrast, clipping,
+                         noise, face vs room when tracked) and print a starting <Look> grade
+  lut [list]             Built-in looks for <Look look="…">
+  lut preview <id> [--at=s] [--grade]  One sheet: the frame under every look (--grade: after grade-check's fix)
+  lut import <file.cube> Add a .cube LUT to the project → <Look look="luts/<name>.cube">
+  denoise <id> [--strength=light|medium|strong]  Denoised copy as a new asset (keeps transcript + tracking)
+  blender install        Install Blender (Cycles) into .cache/blender (~1 GB, once)
+  blender <script> [--name=x] [--frames=0-149 | --still=N] [--res=1080x1920] [--scale=0.5] [--samples=96]
+          [--transparent] [--blend] [--opt.key=value…]
+                         Path-trace project/blender/<script>.py to media/renders/<name>/ (PNG per frame)
+                         → <BlenderShot name="x" /> in scenes. Card: blender-hero-shots
+  hdri <slug> [--res=1k|2k|4k]  Download a Poly Haven HDRI (CC0) for <Studio3D hdri="hdri/<slug>_1k.hdr">
+                         and Blender scenes. Browse slugs at https://polyhaven.com/hdris
   sfx <kind|all> [--seed=N] [--seconds=S]   Synthesize sound effects into the library
   tts "<text>" [--voice=Charon] [--style="…"] [--provider=deepgram]
                          Voiceover: Gemini (directable, ~100 free requests/day per key). If it's unavailable it
@@ -805,6 +818,160 @@ async function cmdTreatments(args: string[]) {
   console.log(rel(sheet));
 }
 
+async function cmdGradeCheck(args: string[]) {
+  const { getAsset } = await import('../server/media/library.ts');
+  const { measureClip, adviseGrade } = await import('../server/media/color.ts');
+  const a = args[0] ? getAsset(args[0]) : null;
+  if (!a || a.kind !== 'video') fail('usage: grade-check <video asset id> [--at=s,s]');
+  const at = args.find((x) => x.startsWith('--at='))?.slice(5).split(',').map(Number).filter(Number.isFinite);
+  const s = await measureClip(a, at);
+  const advice = adviseGrade(s);
+  const pct = (x: number) => `${(x * 100).toFixed(1)}%`;
+  console.log(`${a.id}  ·  sampled at ${s.at.map((t) => t.toFixed(1)).join(', ')} s (proxy)`);
+  console.log(`luma p1/p50/p99 ${s.luma.p1.toFixed(2)}/${s.luma.p50.toFixed(2)}/${s.luma.p99.toFixed(2)} · clipped ${pct(s.clipped)} · crushed ${pct(s.crushed)} · saturation ${s.saturation.toFixed(2)} · noise σ ${s.noise.toFixed(2)}`);
+  if (s.subject) console.log(`face ${s.subject.face.toFixed(2)} · room ${s.subject.room.toFixed(2)} (tracked)`);
+  else console.log('(not tracked: run `ev track` for face-vs-room separation numbers)');
+  console.log('');
+  advice.lines.forEach((l) => console.log(`- ${l}`));
+  const props = (g: Record<string, number | string>) => Object.entries(g).map(([k, v]) => (typeof v === 'number' ? `${k}={${v}}` : `${k}="${v}"`)).join(' ');
+  console.log('\nStarting point (correction only; add look="…" amount={…} for style, then CHECK the frames):');
+  if (advice.room) {
+    const room = { ...advice.grade, exposure: Math.round(((Number(advice.grade.exposure ?? 0)) + advice.room.exposure!) * 100) / 100, saturation: advice.room.saturation! };
+    console.log(`  <FollowCam id="${a.id}" …>`);
+    console.log(`    <Look ${props(room)}><CamFootage id="${a.id}" muted /></Look>   {/* room */}`);
+    console.log(`    <SubjectWindow id="${a.id}" grade={{ ${Object.entries(advice.grade).map(([k, v]) => `${k}: ${typeof v === 'number' ? v : `'${v}'`}`).join(', ')} }} />   {/* her */}`);
+    console.log('  </FollowCam>');
+  } else console.log(`  <Look ${props(advice.grade)}><Footage id="${a.id}" /></Look>`);
+}
+
+async function cmdLut(args: string[]) {
+  const { LOOKS } = await import('../src/video/looks.ts');
+  const sub = args[0] ?? 'list';
+  if (sub === 'list') {
+    for (const [k, v] of Object.entries(LOOKS)) console.log(`- ${k.padEnd(12)} ${v.about}`);
+    console.log(`- ${'theme'.padEnd(12)} Generated from the project theme: shadows toward its background hue, highlights toward its accent.`);
+    const { LUT_DIR } = await import('../server/media/color.ts');
+    const custom = existsSync(LUT_DIR) ? readdirSync(LUT_DIR).filter((f) => f.endsWith('.cube')) : [];
+    for (const f of custom) console.log(`- luts/${f}  (imported)`);
+    console.log('\nUse: <Look look="film" amount={0.7}> … </Look>   Preview on footage: ev lut preview <id>');
+    return;
+  }
+  if (sub === 'import') {
+    const { importLut } = await import('../server/media/color.ts');
+    if (!args[1]) fail('usage: lut import <file.cube>');
+    try {
+      console.log(`look="${importLut(resolve(args[1]))}"`);
+    } catch (e) {
+      fail(e instanceof Error ? e.message : String(e));
+    }
+    return;
+  }
+  if (sub === 'preview') {
+    const { getAsset, mediaPath } = await import('../server/media/library.ts');
+    const { writeBuiltinLuts, LUT_DIR, measureClip, adviseGrade } = await import('../server/media/color.ts');
+    const { ffmpeg } = await import('../server/media/ffmpeg.ts');
+    const { makeSheet } = await import('./sheet.ts');
+    const tokens = JSON.parse(readFileSync(join(PROJECT_DIR, 'theme', 'tokens.json'), 'utf8')) as { colors: { bg: string; accent: string } };
+    const a = args[1] ? getAsset(args[1]) : null;
+    if (!a || (a.kind !== 'video' && a.kind !== 'image')) fail('usage: lut preview <asset id> [--at=s] [--grade]');
+    const at = Number(args.find((x) => x.startsWith('--at='))?.slice(5) ?? (a.duration ?? 0) / 2);
+    ensureDirs();
+    const luts = writeBuiltinLuts(tokens.colors);
+    const custom = existsSync(LUT_DIR) ? readdirSync(LUT_DIR).filter((f) => f.endsWith('.cube')).map((f) => [f.replace(/\.cube$/, ''), join(LUT_DIR, f)] as [string, string]) : [];
+    // --grade: apply grade-check's exposure first (approximately, as an ffmpeg curve) so looks are judged on corrected footage
+    let pre = '';
+    if (args.includes('--grade') && a.kind === 'video') {
+      const g = adviseGrade(await measureClip(a)).grade;
+      pre = `format=gbrpf32le,exposure=exposure=${Number(g.exposure ?? 0)},format=yuv444p,eq=contrast=${Number(g.contrast ?? 1)},`;
+    }
+    const src = mediaPath(a.proxy ?? a.file);
+    const items: [string, string | null][] = [['original', null], ...Object.entries(luts), ...custom];
+    const outs: string[] = [];
+    for (const [name, file] of items) {
+      const out = join(SNAPSHOTS_DIR, `lut-${a.id}-${name}.png`);
+      const vf = file ? `${pre}lut3d=file='${file}':interp=tetrahedral` : 'null';
+      await ffmpeg(['-y', ...(a.kind === 'video' ? ['-ss', at.toFixed(3)] : []), '-i', src, '-frames:v', '1', '-vf', vf, out]);
+      outs.push(out);
+    }
+    const portrait = (a.height ?? 0) > (a.width ?? 1);
+    const sheet = makeSheet(outs, items.map(([n]) => n), join(SNAPSHOTS_DIR, `lut-sheet-${a.id}.jpg`), { cols: portrait ? 5 : 4, tileWidth: portrait ? 300 : 480 });
+    console.log(rel(sheet));
+    console.log('LUT only (the GPU <Look> applies the same tables; correction controls are not in this sheet unless --grade).');
+    return;
+  }
+  fail('usage: lut [list] | lut preview <id> [--at=s] [--grade] | lut import <file.cube>');
+}
+
+async function cmdDenoise(args: string[]) {
+  const { getAsset } = await import('../server/media/library.ts');
+  const { denoiseAsset } = await import('../server/media/color.ts');
+  const { analyzeAsset } = await import('../server/media/analyze.ts');
+  const a = args[0] ? getAsset(args[0]) : null;
+  if (!a || a.kind !== 'video') fail('usage: denoise <video asset id> [--strength=light|medium|strong]');
+  const strength = (args.find((x) => x.startsWith('--strength='))?.split('=')[1] ?? 'medium') as 'light' | 'medium' | 'strong';
+  if (!['light', 'medium', 'strong'].includes(strength)) fail('strength must be light, medium or strong');
+  const t0 = Date.now();
+  const out = await denoiseAsset(a, strength, (m) => console.log(m));
+  await analyzeAsset(out.id, { log: (m) => console.log(`  ${m}`) });
+  console.log(`+ ${out.id}  in ${Math.round((Date.now() - t0) / 1000)} s (transcript and tracking carried over)`);
+  console.log(`Switch the scene's asset id to it (e.g. SRC = '${out.id}'); compare with \`ev grade-check ${out.id}\`.`);
+}
+
+async function cmdHdri(args: string[]) {
+  const { MEDIA_DIR } = await import('../server/media/library.ts');
+  const { mkdirSync, writeFileSync } = await import('node:fs');
+  const slug = args[0];
+  const res = args.find((a) => a.startsWith('--res='))?.split('=')[1] ?? '1k';
+  if (!slug || !/^[a-z0-9_]+$/.test(slug)) fail('usage: hdri <polyhaven slug, e.g. studio_small_09> [--res=1k|2k|4k]');
+  const files = (await (await fetch(`https://api.polyhaven.com/files/${slug}`)).json().catch(() => null)) as { hdri?: Record<string, { hdr?: { url: string; size: number } }> } | null;
+  const file = files?.hdri?.[res]?.hdr;
+  if (!file) fail(`No ${res} HDR for "${slug}" on Poly Haven (check the slug at https://polyhaven.com/hdris)`);
+  const info = (await (await fetch(`https://api.polyhaven.com/info/${slug}`)).json()) as { name?: string; authors?: Record<string, string> };
+  const dir = join(MEDIA_DIR, 'hdri');
+  mkdirSync(dir, { recursive: true });
+  const name = `${slug}_${res}.hdr`;
+  const body = Buffer.from(await (await fetch(file.url)).arrayBuffer());
+  writeFileSync(join(dir, name), body);
+  writeFileSync(join(dir, `${slug}_${res}.json`), JSON.stringify({ slug, name: info.name, authors: Object.keys(info.authors ?? {}), license: 'CC0', url: `https://polyhaven.com/a/${slug}` }, null, 2));
+  console.log(`hdri/${name}  (${(body.length / 1e6).toFixed(1)} MB · "${info.name}" by ${Object.keys(info.authors ?? {}).join(', ')} · CC0)`);
+  console.log(`Use: <Studio3D hdri="hdri/${name}" …>  ·  Blender: ev blender … --hdri=hdri/${name}`);
+}
+
+async function cmdBlender(args: string[]) {
+  const { ensureBlender, renderBlender, BLENDER_VERSION } = await import('../server/media/blender.ts');
+  const flag = (k: string) => args.find((a) => a.startsWith(`--${k}=`))?.slice(k.length + 3);
+  if (args[0] === 'install') {
+    const path = await ensureBlender((m) => console.log(m));
+    return console.log(`Blender ${BLENDER_VERSION}: ${rel(path)}`);
+  }
+  const script = args[0];
+  if (!script || script.startsWith('--')) fail('usage: blender install | blender <script> [--name=x] [--frames=0-149 | --still=N] [--res=WxH] [--scale=0.5] [--samples=96] [--transparent] [--opt.key=value]');
+  const t = loadTimeline();
+  const [w, h] = (flag('res') ?? `${t.width}x${t.height}`).split('x').map(Number) as [number, number];
+  const scale = Number(flag('scale') ?? 1);
+  const still = flag('still');
+  const frames = (still !== undefined ? [Number(still), Number(still)] : (flag('frames') ?? '0-0').split('-').map(Number)) as [number, number];
+  const options = Object.fromEntries(args.filter((a) => a.startsWith('--opt.')).map((a) => {
+    const [k, ...v] = a.slice(6).split('=');
+    const val = v.join('=');
+    return [k!, val === '' ? true : Number.isFinite(Number(val)) ? Number(val) : val];
+  }));
+  const name = flag('name') ?? basename(script, '.py');
+  const job = { script, name, width: Math.round(w * scale), height: Math.round(h * scale), samples: Number(flag('samples') ?? 96), frames, transparent: args.includes('--transparent'), fps: t.fps, options, saveBlend: args.includes('--blend') };
+  const n = frames[1] - frames[0] + 1;
+  console.log(`rendering ${script} → media/renders/${name}/  ${job.width}×${job.height} · ${job.samples} spp · frames ${frames[0]}–${frames[1]} (${n})`);
+  try {
+    const r = await renderBlender(job, (f, s) => {
+      const done = f - frames[0] + 1;
+      if (done === 1 || done === n || done % 10 === 0) console.log(`  frame ${f}  ${s.toFixed(1)} s${n > 1 ? `  (${done}/${n}, ~${Math.round(((n - done) * s) / 60)} min left)` : ''}`);
+    }, (m) => console.log(`  ${m}`));
+    console.log(`${r.frames} frame(s) in ${r.seconds} s (${r.perFrame.toFixed(1)} s/frame) → ${rel(r.dir)}`);
+    console.log(`In scenes: <BlenderShot name="${name}" />  (src/video/blender; frame N of the scene shows ${String(frames[0]).padStart(5, '0')}.png + N)`);
+  } catch (e) {
+    fail(e instanceof Error ? e.message : String(e));
+  }
+}
+
 const [command, ...args] = process.argv.slice(2);
 const commands: Record<string, (args: string[]) => unknown> = {
   wait: cmdWait,
@@ -827,6 +994,11 @@ const commands: Record<string, (args: string[]) => unknown> = {
   remove: cmdRemove,
   occupancy: cmdOccupancy,
   track: cmdTrack,
+  'grade-check': cmdGradeCheck,
+  lut: cmdLut,
+  denoise: cmdDenoise,
+  hdri: oneLineErrors(cmdHdri),
+  blender: cmdBlender,
   reference: cmdReference,
   tts: oneLineErrors(cmdTts),
   'sfx-find': oneLineErrors(cmdSfxFind),

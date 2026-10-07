@@ -213,6 +213,23 @@ Before adding or changing any sound effect, read `SOUND.md`.
   - The default dip is about -8 dB.
 - **Delivery:** `ev export final` renders the original media and normalizes to -14 LUFS (two-pass).
 
+## Picture quality: colour, 3D, Blender
+
+Order of preference: colour-grade the footage first (helps every frame), use `<Studio3D>` for 3D, and use Blender only for hero shots where realism is the point.
+
+- **Colour** (card `color-grading`):
+  - `ev grade-check <id>` measures exposure, white balance, contrast, clipping and noise, plus face vs room when tracked. It prints a starting grade.
+  - `<Look exposure temperature tint contrast shadows highlights saturation vibrance look="film" amount>` (from `library`) grades every `Footage`/`Picture` inside it on the GPU. Text is untouched, and preview equals render.
+  - Built-in looks: clean, film, teal-orange, warm, moody, mono, theme. `ev lut preview <id>` shows all of them on a real frame; `ev lut import x.cube` adds one.
+  - On tracked footage: `<SubjectWindow grade>` (tracked power window) and `<PortraitBlur blur>` (halo-free background blur) from `src/video/track`.
+  - `ev denoise <id> --strength=…` makes a cleaned copy and carries over the transcript and tracking.
+- **3D** (card `studio-3d`): `<Studio3D look="studio|product|sunset|night|basic" backdrop focus shadowReach hdri>` plus `MATERIALS.*`. `ev hdri <polyhaven-slug>` downloads CC0 lighting. Depth of field only works with `backdrop` (an opaque scene).
+- **Blender** (card `blender-hero-shots`):
+  - `ev blender install` (once). Scene scripts live in `project/blender/<shot>.py` and use `scripts/blender/ev3d.py`.
+  - `ev blender <shot> --name=x --frames=a-b|--still=N [--res] [--samples] [--transparent] [--opt.k=v]` renders PNGs to `media/renders/x/`; play them with `<BlenderShot name="x" />` from `src/video/blender`.
+  - On the M1, the first render compiles GPU kernels (one time). After that, expect about 11 s per half-res frame and about 80 s per full-res frame.
+  - Share geometry between the Three.js and Blender versions through JSON, never by retyping numbers.
+
 ## Polish tools
 
 - `ev export [final|draft]`: final = original media plus loudness normalization; draft = half size, fast. The editor's **Export** menu does the same, with progress and a download link.

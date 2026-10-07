@@ -6,6 +6,7 @@ import tokens from '../../project/theme/tokens.json';
 import mediaJson from '../../project/media.json';
 import type { MediaManifest, ThemeTokens } from '../shared/types.ts';
 import { fontStack } from './fonts';
+import { GradedImage, GradedVideo, useLook } from './grade';
 
 const media = mediaJson as MediaManifest;
 
@@ -132,7 +133,12 @@ type Fit = 'cover' | 'contain';
 export function Footage({ id, from = 0, to, volume = 1, muted = false, fit = 'cover', playbackRate = 1, style }: { id: string; from?: number; to?: number; volume?: number | ((frame: number) => number); muted?: boolean; fit?: Fit; playbackRate?: number; style?: CSSProperties }) {
   const src = useAssetSrc(id);
   const { fps } = useVideoConfig();
+  const look = useLook();
   if (!src) return <MissingAsset id={id} />;
+  if (look) {
+    const trim = { trimBefore: Math.round(from * fps), trimAfter: to !== undefined ? Math.round(to * fps) : undefined };
+    return <GradedVideo state={look} src={src} fit={fit} style={style} {...trim} volume={volume} muted={muted} playbackRate={playbackRate} />;
+  }
   return (
     <OffthreadVideo
       src={src}
@@ -149,7 +155,9 @@ export function Footage({ id, from = 0, to, volume = 1, muted = false, fit = 'co
 /** A still image asset. Fills its container. */
 export function Picture({ id, fit = 'cover', style }: { id: string; fit?: Fit; style?: CSSProperties }) {
   const src = useAssetSrc(id);
+  const look = useLook();
   if (!src) return <MissingAsset id={id} />;
+  if (look) return <GradedImage state={look} src={src} fit={fit} style={style} />;
   return <Img src={src} style={{ width: '100%', height: '100%', objectFit: fit, ...style }} />;
 }
 

@@ -13,4 +13,6 @@ export const DEMO_FRAMES: Record<string, number> = {
   Callout: 60,
   BeatPulse: 61,
   AuroraBackground: 90,
+  Look: 40,
+  Studio3D: 45,
 };
