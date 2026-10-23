@@ -1,0 +1,18 @@
+{
+  "name": "Boss Level",
+  "description": "Graphite night with warm-white type and one hot signal orange. Mona Sans Expanded Black for game-like level cards and outline-repeat walls, Geist Mono HUD labels. Escalating talking-head lists, 'level 1 → boss' tips, confident creator lessons.",
+  "colors": {
+    "bg": "#0C0C0D",
+    "surface": "#18181A",
+    "text": "#F6F2EA",
+    "muted": "#9A958C",
+    "accent": "#FF5A1F",
+    "accent2": "#E8E2D4"
+  },
+  "fonts": { "display": "Mona Sans", "body": "Geist", "mono": "JetBrains Mono" },
+  "type": { "displayWeight": 900, "displayTracking": "-0.01em", "uppercaseDisplay": true },
+  "easing": { "standard": [0.16, 1, 0.3, 1], "emphasized": [0.87, 0, 0.13, 1] },
+  "tempo": 1,
+  "stagger": 2,
+  "radius": 22
+}

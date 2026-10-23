@@ -1,0 +1,18 @@
+{
+  "name": "Mono Maroon",
+  "description": "Luxury-editorial talking head after the Iman Gadzhi long-form look: high-key black-and-white grade, one oxblood maroon accent (circles, keywords), heavy Geist headlines over a hairline light subtitle, lowercase white captions that go light to bold on the spoken word, frosted glass cards. Calm authority, premium personal brands.",
+  "colors": {
+    "bg": "#0D0D0D",
+    "surface": "#1B1B1B",
+    "text": "#F5F5F2",
+    "muted": "#9C9C98",
+    "accent": "#7E1F2A",
+    "accent2": "#C7C2B8"
+  },
+  "fonts": { "display": "Geist", "body": "Geist", "mono": "JetBrains Mono" },
+  "type": { "displayWeight": 800, "displayTracking": "-0.04em", "uppercaseDisplay": false },
+  "easing": { "standard": [0.22, 1, 0.36, 1], "emphasized": [0.83, 0, 0.17, 1] },
+  "tempo": 0.85,
+  "stagger": 3,
+  "radius": 28
+}

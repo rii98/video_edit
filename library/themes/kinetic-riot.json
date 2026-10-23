@@ -1,0 +1,18 @@
+{
+  "name": "Kinetic Riot",
+  "description": "Poster-energy kinetic type over desaturated footage: Anybody at extreme widths (ultra-condensed 50 to extended 150) with grit, one acid mint and one signal red. Full-screen word takeovers, width-morphing slams, stacked repeats. Comedy, hype, punchy opinion reels.",
+  "colors": {
+    "bg": "#0A0A0A",
+    "surface": "#161616",
+    "text": "#F7F7F2",
+    "muted": "#8E8E88",
+    "accent": "#2BF0B4",
+    "accent2": "#FF3420"
+  },
+  "fonts": { "display": "Anybody", "body": "Geist", "mono": "JetBrains Mono" },
+  "type": { "displayWeight": 900, "displayTracking": "-0.02em", "uppercaseDisplay": true },
+  "easing": { "standard": [0.12, 1, 0.3, 1], "emphasized": [0.9, 0, 0.1, 1] },
+  "tempo": 1.15,
+  "stagger": 1,
+  "radius": 10
+}

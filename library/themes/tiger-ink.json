@@ -1,0 +1,18 @@
+{
+  "name": "Tiger Ink",
+  "description": "Deep ink black, warm cream type and one tiger-orange accent (the Bengal tiger on the Rs 500 note). Heavy grotesk display over mono labels. For continuous zoom-through and portal edits where the picture does the talking.",
+  "colors": {
+    "bg": "#070605",
+    "surface": "#15120F",
+    "text": "#F6EFE3",
+    "muted": "#9B9287",
+    "accent": "#F08A24",
+    "accent2": "#F6EFE3"
+  },
+  "fonts": { "display": "Bricolage Grotesque", "body": "Bricolage Grotesque", "mono": "JetBrains Mono" },
+  "type": { "displayWeight": 800, "displayTracking": "-0.04em", "uppercaseDisplay": true },
+  "easing": { "standard": [0.16, 1, 0.3, 1], "emphasized": [0.9, 0, 0.1, 1] },
+  "tempo": 1,
+  "stagger": 2,
+  "radius": 22
+}

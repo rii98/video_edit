@@ -16,6 +16,11 @@ import redPen from './red-pen.json';
 import velvetCinema from './velvet-cinema.json';
 import emberSupper from './ember-supper.json';
 import menuCard from './menu-card.json';
+import bossLevel from './boss-level.json';
+import monoMaroon from './mono-maroon.json';
+import kineticRiot from './kinetic-riot.json';
+import banknoteIntaglio from './banknote-intaglio.json';
+import tigerInk from './tiger-ink.json';
 
 export const themes: Record<string, ThemeTokens> = {
   'warm-editorial': warmEditorial,
@@ -33,4 +38,9 @@ export const themes: Record<string, ThemeTokens> = {
   'velvet-cinema': velvetCinema,
   'ember-supper': emberSupper,
   'menu-card': menuCard,
+  'boss-level': bossLevel,
+  'mono-maroon': monoMaroon,
+  'kinetic-riot': kineticRiot,
+  'banknote-intaglio': banknoteIntaglio,
+  'tiger-ink': tigerInk,
 };

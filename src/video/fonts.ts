@@ -19,6 +19,17 @@ import { loadFont as archivo } from '@remotion/google-fonts/Archivo';
 import { loadFont as permanentMarker } from '@remotion/google-fonts/PermanentMarker';
 import { loadFont as interTight } from '@remotion/google-fonts/InterTight';
 import { loadFont as luckiestGuy } from '@remotion/google-fonts/LuckiestGuy';
+import { loadVariableFont as monaSans } from '@remotion/google-fonts/MonaSans';
+import { loadVariableFont as anybody } from '@remotion/google-fonts/Anybody';
+import { loadVariableFont as geist } from '@remotion/google-fonts/Geist';
+import { loadFont as teko } from '@remotion/google-fonts/Teko';
+import { loadFont as poppins } from '@remotion/google-fonts/Poppins';
+import { loadFont as bigShoulders } from '@remotion/google-fonts/BigShoulders';
+import { loadFont as plexMono } from '@remotion/google-fonts/IBMPlexMono';
+import { loadFont as courierPrime } from '@remotion/google-fonts/CourierPrime';
+import { loadFont as mukta } from '@remotion/google-fonts/Mukta';
+import { loadVariableFont as anekDevanagari } from '@remotion/google-fonts/AnekDevanagari';
+import { loadFont as rozhaOne } from '@remotion/google-fonts/RozhaOne';
 
 type Loader = () => { fontFamily: string };
 // Only the weights and subset we use: each extra weight is another network request at render.
@@ -45,6 +56,22 @@ const loaders: Record<string, { load: Loader; fallback: string }> = {
   'Permanent Marker': { load: () => permanentMarker('normal', opts(['400'])), fallback: 'cursive' },
   'Inter Tight': { load: () => interTight('normal', opts(['400', '600', '800'])), fallback: 'Helvetica, Arial, sans-serif' },
   'Luckiest Guy': { load: () => luckiestGuy('normal', opts(['400'])), fallback: 'Impact, sans-serif' },
+  // Variable fonts (full wght, and wdth where the family has it): animate font-stretch/weight.
+  'Mona Sans': { load: () => monaSans('normal', { subsets: ['latin'] } as never), fallback: 'Helvetica, Arial, sans-serif' },
+  Anybody: { load: () => anybody('normal', { subsets: ['latin'] } as never), fallback: 'Impact, sans-serif' },
+  Geist: { load: () => geist('normal', { subsets: ['latin'] } as never), fallback: 'Helvetica, Arial, sans-serif' },
+  // Geometric, close to the ileyy wordmark (thin round e, straight y).
+  Poppins: { load: () => poppins('normal', { weights: ['300', '400', '500'], subsets: ['latin', 'latin-ext'] } as never), fallback: 'Helvetica, Arial, sans-serif' },
+  // money: case-file stamps (Big Shoulders), thermal receipt (IBM Plex Mono), typed dossier (Courier Prime).
+  'Big Shoulders': { load: () => bigShoulders('normal', opts(['700', '900'])), fallback: 'Impact, sans-serif' },
+  'IBM Plex Mono': { load: () => plexMono('normal', opts(['400', '600', '700'])), fallback: 'Menlo, monospace' },
+  'Courier Prime': { load: () => courierPrime('normal', opts(['400', '700'])), fallback: 'Courier, monospace' },
+  // Condensed with Devanagari: Nepali words set in their own script.
+  Teko: { load: () => teko('normal', { weights: ['500', '700'], subsets: ['latin', 'devanagari'] } as never), fallback: 'Impact, sans-serif' },
+  // group-of: काग (kaag, crow) in its own script, one face per treatment.
+  Mukta: { load: () => mukta('normal', { weights: ['500', '800'], subsets: ['latin', 'devanagari'] } as never), fallback: 'Helvetica, Arial, sans-serif' },
+  'Anek Devanagari': { load: () => anekDevanagari('normal', { subsets: ['latin', 'devanagari'] } as never), fallback: 'Impact, sans-serif' },
+  'Rozha One': { load: () => rozhaOne('normal', { weights: ['400'], subsets: ['latin', 'devanagari'] } as never), fallback: 'Georgia, serif' },
 };
 
 export const FONT_NAMES = Object.keys(loaders);
